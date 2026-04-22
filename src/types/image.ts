@@ -1,8 +1,9 @@
 export interface IImage {
+  fileName: string;
   width: number;
   height: number;
   format: string;
-  pixelData: ImageData; 
+  pixelData: ImageData;
 }
 
 export interface IPNGImage extends IImage {
@@ -11,7 +12,7 @@ export interface IPNGImage extends IImage {
 }
 
 export interface IJPEGImage extends IImage {
-  format: 'JPEG';
+  format: 'JPG';
   bitDepth: 8 | 24 | 32;
 }
 
@@ -20,7 +21,7 @@ export interface IGB7Image extends IImage {
   format: 'GB7';
   bitDepth: 7 | 8;
   hasMask: boolean;
-  rawBytes: Uint8Array; 
+  rawBytes: Uint8Array;
 }
 
 export type TLoadedImage = IPNGImage | IJPEGImage | IGB7Image;

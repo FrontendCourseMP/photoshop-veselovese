@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { TLoadedImage } from '../types/image';
 
 interface CanvasViewProps {
@@ -28,11 +28,10 @@ export const CanvasView: React.FC<CanvasViewProps> = ({ image }) => {
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                backgroundColor: '#333',
+                backgroundColor: '#1e1e1e',
                 overflow: 'hidden',
                 height: '100%',
                 maxHeight: 'calc(100vh - 4.8rem - 3.2rem)',
-                padding: '1.6rem'
             }}
         >
             {image && (
@@ -40,15 +39,15 @@ export const CanvasView: React.FC<CanvasViewProps> = ({ image }) => {
                     ref={canvasRef}
                     style={{
                         boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-                        maxWidth: '100%',
-                        maxHeight: '100%',
+                        maxWidth: 'calc(100% - 2.4rem*2)',
+                        maxHeight: 'calc(100% - 2.4rem*2',
                         width: 'auto',
                         height: 'auto'
                     }}
                 />
             )}
             {!image && (
-                <Box sx={{ color: '#666' }}>Загрузите изображение через кнопку меню "Открыть"</Box>
+                <Typography variant="caption" sx={{ color: '#ccc', fontSize: '1.6rem' }}>Загрузите изображение через кнопку меню "Открыть"</Typography>
             )}
         </Box>
     );

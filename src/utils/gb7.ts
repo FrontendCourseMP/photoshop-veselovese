@@ -3,7 +3,7 @@ import { IGB7Image, IImage } from '../types/image';
 const SIGNATURE = [0x47, 0x42, 0x37, 0x1D]; // G, B, 7, Group Separator
 
 export const GB7Service = {
-    decode: (buffer: ArrayBuffer): IGB7Image => {
+    decode: (buffer: ArrayBuffer, fileName: string = 'image.gb7'): IGB7Image => {
         const view = new DataView(buffer);
 
         for (let i = 0; i < 4; i++) {
@@ -12,7 +12,6 @@ export const GB7Service = {
             }
         }
 
-        const version = view.getUint8(4);
         const flag = view.getUint8(5);
         const hasMask = (flag & 0x01) === 1;
         console.log(hasMask);
@@ -45,6 +44,7 @@ export const GB7Service = {
         }
 
         return {
+            fileName: fileName,
             width,
             height,
             format: 'GB7',

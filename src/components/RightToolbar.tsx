@@ -1,24 +1,23 @@
-import React from 'react';
-import { Box, Typography } from '@mui/material';
-import { TLoadedImage } from '../types/image';
+import { Toolbar, Typography } from '@mui/material';
 
-export const RightToolbar = ({ }) => {
+export const RightToolbar = () => {
     return (
-        <Box
+        <Toolbar
             sx={{
-                backgroundColor: '#eee',
+                backgroundColor: '#2c2c2c',
                 display: 'flex',
                 alignItems: 'start',
-                p: 2,
-                borderBottom: '1px solid #ccc',
+                p: '2.4rem',
+                borderLeft: '1px solid #383838',
                 fontSize: '0.8rem',
                 height: '100%',
-                minWidth: '250px',
+                minWidth: '300px',
+                maxWidth: '300px',
             }}
         >
-            <Typography variant="caption" color="textSecondary">
+            <Typography variant="caption" sx={{ color: '#ccc', fontSize: '1.4rem' }}>
                 Правая панель инструментов
             </Typography>
-        </Box>
+        </Toolbar>
     );
 };

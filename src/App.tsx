@@ -1,28 +1,25 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  AppBar, Toolbar, Typography, Button, Box, Container,
-  MenuItem, ListItemIcon, ListItemText, Menu
+  Box
 } from '@mui/material';
-import {
-  Upload as UploadIcon, Save as SaveIcon,
-  Image as ImageIcon, InsertDriveFile as FileIcon,
-  PhotoFilter as JpgIcon
-} from '@mui/icons-material';
 import { StatusBar } from './components/StatusBar';
 import { CanvasView } from './components/CanvasView';
 import { RightToolbar } from './components/RightToolbar';
-import { TLoadedImage, IPNGImage, IGB7Image, IJPEGImage } from './types/image';
+import { TLoadedImage, IPNGImage, IJPEGImage } from './types/image';
 import { GB7Service } from './utils/gb7';
+import { MainToolbar } from './components/MainToolbar';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
-  const [fileInputRef, setFileInputRef] = useState<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [saveMenuAnchor, setSaveMenuAnchor] = useState<null | HTMLElement>(null);
-
-  const handleUploadAction = () => {
-    fileInputRef?.click();
+  const getExportFileName = (originalName: string, newExtension: string) => {
+    const lastDotIndex = originalName.lastIndexOf('.');
+    const nameWithoutExt = lastDotIndex !== -1 ? originalName.substring(0, lastDotIndex) : originalName;
+    return `${nameWithoutExt}.${newExtension}`;
   };
+
+  const handleUploadAction = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,8 +31,8 @@ function App() {
       if (ext === 'gb7') {
         // Обработка GB7
         const buffer = await file.arrayBuffer();
-        const gb7Image = GB7Service.decode(buffer);
-        setImage(gb7Image);
+        const gb7Image = GB7Service.decode(buffer, file.name);
+        setImage({ ...gb7Image, fileName: file.name });
       } else {
         // Обработка PNG/JPG через браузерный API
         const bitmap = await createImageBitmap(file);
@@ -53,9 +50,10 @@ function App() {
         const bitDepth = hasAlpha ? 32 : 24;
 
         const stdImage: IPNGImage | IJPEGImage = {
+          fileName: file.name,
           width: bitmap.width,
           height: bitmap.height,
-          format: ext === 'png' ? 'PNG' : 'JPEG',
+          format: ext === 'png' ? 'PNG' : 'JPG',
           bitDepth: bitDepth as any,
           pixelData: imageData
         };
@@ -79,16 +77,14 @@ function App() {
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
-    document.body.appendChild(a); // Требуется для Firefox
+    document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  // Обработчик сохранения как PNG
   const handleSaveAsPng = () => {
     if (!image) return;
-    // Создаем временный canvas
     const canvas = document.createElement('canvas');
     canvas.width = image.width;
     canvas.height = image.height;
@@ -96,16 +92,14 @@ function App() {
     if (!ctx) return;
     ctx.putImageData(image.pixelData, 0, 0);
 
-    // Конвертируем в Blob и скачиваем
     canvas.toBlob((blob) => {
       if (blob) {
-        triggerDownload(blob, `image-export.png`);
+        const newName = getExportFileName(image.fileName, 'png');
+        triggerDownload(blob, newName);
       }
     }, 'image/png');
-    setSaveMenuAnchor(null); // Закрываем меню
   };
 
-  // Обработчик сохранения как JPEG
   const handleSaveAsJpg = () => {
     if (!image) return;
     const canvas = document.createElement('canvas');
@@ -113,97 +107,39 @@ function App() {
     canvas.height = image.height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Важно: JPEG не поддерживает прозрачность. 
-    // Можно залить белым фоном перед сохранением, иначе прозрачные пиксели станут черными.
-    // Но для чистоты лабораторной работы (чтобы сохранить вид) используем стандартное поведение.
-    // Если хотим "красивый" JPG, можно нарисовать сначала белый прямоугольник.
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, image.width, image.height);
     ctx.putImageData(image.pixelData, 0, 0);
 
     canvas.toBlob((blob) => {
       if (blob) {
-        triggerDownload(blob, `image-export.jpg`);
+        const newName = getExportFileName(image.fileName, 'jpg');
+        triggerDownload(blob, newName);
       }
-    }, 'image/jpeg', 0.9); // 0.9 - качество
-    setSaveMenuAnchor(null);
+    }, 'image/jpeg', 0.9);
   };
 
-  // Обработчик сохранения как GB7
   const handleSaveAsGb7 = () => {
     if (!image) return;
-    // Передаем объект image (реализующий IBaseImage) в наш обновленный сервис
     const blob = GB7Service.encode(image);
-    triggerDownload(blob, `image-export.gb7`);
-    setSaveMenuAnchor(null);
+    const newName = getExportFileName(image.fileName, 'gb7');
+    triggerDownload(blob, newName);
   };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <AppBar position="static" color="default" elevation={1}>
-        <Toolbar variant="dense">
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            Photobara
-          </Typography>
-
-          <input
-            type="file"
-            ref={(ref) => setFileInputRef(ref)}
-            style={{ display: 'none' }}
-            accept="image/png, image/jpeg, .gb7"
-            onChange={handleFileChange}
-          />
-
-          <Button color="inherit" startIcon={<UploadIcon />} onClick={handleUploadAction}>
-            Открыть
-          </Button>
-          <div>
-            <Button
-              color="inherit"
-              startIcon={<SaveIcon />}
-              disabled={!image}
-              onClick={(e) => setSaveMenuAnchor(e.currentTarget)}
-            >
-              Сохранить как...
-            </Button>
-
-            <Menu
-              anchorEl={saveMenuAnchor}
-              open={Boolean(saveMenuAnchor)}
-              onClose={() => setSaveMenuAnchor(null)}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-            >
-              <MenuItem onClick={handleSaveAsPng}>
-                <ListItemIcon><ImageIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>PNG</ListItemText>
-              </MenuItem>
-
-              <MenuItem onClick={handleSaveAsJpg}>
-                <ListItemIcon><JpgIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>JPG</ListItemText>
-              </MenuItem>
-
-              <MenuItem onClick={handleSaveAsGb7}>
-                <ListItemIcon><FileIcon fontSize="small" /></ListItemIcon>
-                <ListItemText>GB7</ListItemText>
-              </MenuItem>
-            </Menu>
-          </div>
-        </Toolbar>
-      </AppBar>
+      <MainToolbar fileInputRef={fileInputRef}
+        onOpenClick={handleUploadAction}
+        onFileChange={handleFileChange}
+        onSavePng={handleSaveAsPng}
+        onSaveJpg={handleSaveAsJpg}
+        onSaveGb7={handleSaveAsGb7}
+        hasImage={!!image} />
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         <CanvasView image={image} />
 
-        <RightToolbar></RightToolbar>
+        <RightToolbar />
       </Box>
 
       <StatusBar image={image} />
