@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Stack, Typography, Divider } from '@mui/material';
+import { Box, Stack, Typography, } from '@mui/material';
 
 interface ColorData {
     x: number;
@@ -18,22 +18,22 @@ interface InfoPanelProps {
 
 export const InfoPanel: React.FC<InfoPanelProps> = ({ colorData }) => {
     return (
-        <Box sx={{ width: 250, backgroundColor: '#f5f5f5', borderLeft: '1px solid #ddd', p: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-                Информация
+        <Box sx={{ color: '#ccc', fontSize: '1.4rem', width: '100%' }}>
+            <Typography variant="subtitle2" sx={{ mb: '0.8rem', fontWeight: 'bold', fontSize: '1.4rem' }}>
+                Информация о цвете
             </Typography>
 
             {colorData ? (
-                <Stack spacing={1} sx={{ fontSize: '0.9rem' }}>
+                <Stack spacing={1} sx={{ fontSize: '1.2rem', color: '#ccc' }}>
                     <Box>
-                        <Typography variant="caption" color="textSecondary">Координаты:</Typography>
-                        <Typography variant="body2">X: {colorData.x}, Y: {colorData.y}</Typography>
+                        <Typography sx={{ fontSize: '1.2rem' }}>Координаты:</Typography>
+                        <Typography sx={{ fontSize: '1.2rem' }}>
+                            X: {colorData.x}, Y: {colorData.y}
+                        </Typography>
                     </Box>
 
-                    <Divider />
-
                     <Box>
-                        <Typography variant="caption" color="textSecondary">RGB (0-255):</Typography>
+                        <Typography sx={{ fontSize: '1.2rem' }}>RGB (0-255):</Typography>
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
                             <Box
                                 sx={{
@@ -42,24 +42,22 @@ export const InfoPanel: React.FC<InfoPanelProps> = ({ colorData }) => {
                                     border: '1px solid #ccc'
                                 }}
                             />
-                            <Typography variant="body2">
+                            <Typography sx={{ fontSize: '1.2rem' }}>
                                 R:{colorData.r} G:{colorData.g} B:{colorData.b}
                             </Typography>
                         </Box>
                     </Box>
 
-                    <Divider />
-
                     <Box>
-                        <Typography variant="caption" color="textSecondary">CIELAB:</Typography>
-                        <Typography variant="body2">
+                        <Typography sx={{ fontSize: '1.2rem' }}>CIELAB:</Typography>
+                        <Typography sx={{ fontSize: '1.2rem' }}>
                             L: {colorData.L}, A: {colorData.A}, B: {colorData.B}
                         </Typography>
                     </Box>
                 </Stack>
             ) : (
-                <Typography variant="caption" color="textSecondary" sx={{ fontStyle: 'italic' }}>
-                    Выберите инструмент "Пипетка" и кликните по изображению.
+                <Typography variant="caption" sx={{ fontSize: '1.2rem', color: '#ccc' }}>
+                    Выберите инструмент "Пипетка" и кликните по изображению
                 </Typography>
             )}
         </Box>

@@ -1,6 +1,6 @@
-import { Toolbar, Typography } from '@mui/material';
+import { Toolbar, } from '@mui/material';
 import React from 'react';
-import { Box, Divider } from '@mui/material';
+import { Divider } from '@mui/material';
 import { ChannelsPanel } from './ChannelsPanel';
 import { InfoPanel } from './InfoPanel';
 import { ChannelConfig } from '../types/channel';
@@ -22,24 +22,25 @@ export const RightToolbar: React.FC<RightToolbarProps> = ({ originalData, channe
                 display: 'flex',
                 alignItems: 'start',
                 flexDirection: 'column',
+                gap: '1.6rem',
                 p: '2.4rem',
                 borderLeft: '1px solid #383838',
-                fontSize: '0.8rem',
+                fontSize: '1.4rem',
                 height: '100%',
                 width: '100%',
                 maxWidth: '300px',
             }}
         >
+            <InfoPanel colorData={colorData} />
+
+            <Divider sx={{ width: '100%', border: '1px solid #ccc' }} />
+
             <ChannelsPanel
                 originalData={originalData}
                 channels={channels}
                 visibleState={visibleState}
                 onToggleChannel={onToggleChannel}
             />
-
-            <Divider />
-
-            <InfoPanel colorData={colorData} />
         </Toolbar>
     );
 };

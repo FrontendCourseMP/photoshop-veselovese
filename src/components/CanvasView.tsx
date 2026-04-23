@@ -1,13 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { Box, Typography } from '@mui/material';
-import { TLoadedImage } from '../types/image';
 import { ChannelConfig } from '../types/channel';
+import { Tool } from '../types/tool';
 
 interface CanvasViewProps {
     originalData: ImageData | null;
     visibleChannels: Record<string, boolean>;
     availableChannels: ChannelConfig[];
-    activeTool: 'cursor' | 'eyedropper';
+    activeTool: Tool;
     onPixelPicked?: (x: number, y: number, r: number, g: number, b: number) => void;
 }
 
@@ -102,7 +102,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
                 backgroundColor: '#1e1e1e',
                 overflow: 'hidden',
                 height: '100%',
-                maxHeight: 'calc(100vh - 4.8rem - 3.2rem)',
+                maxHeight: 'calc(100vh - 4.8rem - 3.2rem*2)',
             }}
         >
             {originalData && (

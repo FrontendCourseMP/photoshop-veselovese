@@ -1,13 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, } from 'react';
 
 import {
   Box,
-  IconButton,
-  Tooltip
 } from '@mui/material';
-import {
-  Colorize as EyedropperIcon, PanTool as CursorIcon
-} from '@mui/icons-material';
 
 import { StatusBar } from './components/StatusBar';
 import { CanvasView } from './components/CanvasView';
@@ -18,8 +13,8 @@ import { ChannelConfig } from './types/channel';
 
 import { GB7Service } from './utils/gb7';
 import { rgbToLab } from './utils/color';
-
-type Tool = 'cursor' | 'eyedropper';
+import { ToolBar } from './components/ToolBar';
+import { Tool } from './types/tool';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
@@ -37,12 +32,12 @@ function App() {
     // Логика для формата GB7
     if (image.format === 'GB7') {
       const channels: ChannelConfig[] = [
-        { key: 'gray', label: 'Яркость (Gray)', index: 0, isGrayscale: true }
+        { key: 'gray', label: 'Grayscale  (G)', index: 0, isGrayscale: true }
       ];
 
       // Проверяем флаг hasMask из интерфейса IGB7Image
       if ('hasMask' in image && image.hasMask) {
-        channels.push({ key: 'a', label: 'Альфа (Маска)', index: 3, isGrayscale: true });
+        channels.push({ key: 'a', label: 'Альфа (А)', index: 3, isGrayscale: true });
       }
 
       return channels;
@@ -208,24 +203,10 @@ function App() {
         onSaveJpg={handleSaveAsJpg}
         onSaveGb7={handleSaveAsGb7}
         hasImage={!!image} />
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <Tooltip title="Курсор">
-          <IconButton
-            color={activeTool === 'cursor' ? 'primary' : 'default'}
-            onClick={() => setActiveTool('cursor')}
-          >
-            <CursorIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Пипетка">
-          <IconButton
-            color={activeTool === 'eyedropper' ? 'primary' : 'default'}
-            onClick={() => setActiveTool('eyedropper')}
-          >
-            <EyedropperIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
+
+      <ToolBar
+        activeTool={activeTool}
+        onToolSelect={(tool) => setActiveTool(tool)} />
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         <CanvasView

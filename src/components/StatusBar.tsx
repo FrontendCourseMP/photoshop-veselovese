@@ -16,7 +16,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ image }) => {
                 alignItems: 'center',
                 px: 2,
                 justifyContent: 'space-between',
-                borderBottom: '1px solid #ccc',
+                borderTop: '1px solid #ccc',
             }}
         >
             {image ? (
