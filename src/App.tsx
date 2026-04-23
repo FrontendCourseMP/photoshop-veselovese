@@ -1,17 +1,68 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
 import {
-  Box
+  Box,
+  IconButton,
+  Tooltip
 } from '@mui/material';
+import {
+  Colorize as EyedropperIcon, PanTool as CursorIcon
+} from '@mui/icons-material';
+
 import { StatusBar } from './components/StatusBar';
 import { CanvasView } from './components/CanvasView';
 import { RightToolbar } from './components/RightToolbar';
-import { TLoadedImage, IPNGImage, IJPEGImage } from './types/image';
-import { GB7Service } from './utils/gb7';
 import { MainToolbar } from './components/MainToolbar';
+import { TLoadedImage, IPNGImage, IJPEGImage } from './types/image';
+import { ChannelConfig } from './types/channel';
+
+import { GB7Service } from './utils/gb7';
+import { rgbToLab } from './utils/color';
+
+type Tool = 'cursor' | 'eyedropper';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [originalImageData, setOriginalImageData] = useState<ImageData | null>(null);
+  const [availableChannels, setAvailableChannels] = useState<ChannelConfig[]>([]);
+  const [visibleChannels, setVisibleChannels] = useState<Record<string, boolean>>({});
+  const [activeTool, setActiveTool] = useState<Tool>('cursor');
+  const [pickedColor, setPickedColor] = useState<{ x: number; y: number; r: number; g: number; b: number; L: number; A: number; B: number } | null>(null);
+
+  const getAvailableChannels = (image: TLoadedImage | null): ChannelConfig[] => {
+    if (!image) return [];
+
+    // Логика для формата GB7
+    if (image.format === 'GB7') {
+      const channels: ChannelConfig[] = [
+        { key: 'gray', label: 'Яркость (Gray)', index: 0, isGrayscale: true }
+      ];
+
+      // Проверяем флаг hasMask из интерфейса IGB7Image
+      if ('hasMask' in image && image.hasMask) {
+        channels.push({ key: 'a', label: 'Альфа (Маска)', index: 3, isGrayscale: true });
+      }
+
+      return channels;
+    }
+    // Логика для PNG и JPEG
+    else {
+      const channels: ChannelConfig[] = [
+        { key: 'r', label: 'Красный (R)', index: 0, isGrayscale: false },
+        { key: 'g', label: 'Зеленый (G)', index: 1, isGrayscale: false },
+        { key: 'b', label: 'Синий (B)', index: 2, isGrayscale: false },
+      ];
+
+      // Проверяем глубину цвета или наличие прозрачности
+      if (image.bitDepth === 32) {
+        channels.push({ key: 'a', label: 'Альфа (A)', index: 3, isGrayscale: true });
+      }
+
+      return channels;
+    }
+  };
 
   const getExportFileName = (originalName: string, newExtension: string) => {
     const lastDotIndex = originalName.lastIndexOf('.');
@@ -29,12 +80,10 @@ function App() {
 
     try {
       if (ext === 'gb7') {
-        // Обработка GB7
         const buffer = await file.arrayBuffer();
         const gb7Image = GB7Service.decode(buffer, file.name);
-        setImage({ ...gb7Image, fileName: file.name });
+        processLoadedImage(gb7Image);
       } else {
-        // Обработка PNG/JPG через браузерный API
         const bitmap = await createImageBitmap(file);
         const canvas = document.createElement('canvas');
         canvas.width = bitmap.width;
@@ -57,7 +106,7 @@ function App() {
           bitDepth: bitDepth as any,
           pixelData: imageData
         };
-        setImage(stdImage);
+        processLoadedImage(stdImage);
         bitmap.close();
       }
     } catch (err) {
@@ -65,11 +114,35 @@ function App() {
     }
   };
 
+  const processLoadedImage = (loadedImage: TLoadedImage) => {
+    setImage(loadedImage);
+    setOriginalImageData(new ImageData(
+      new Uint8ClampedArray(loadedImage.pixelData.data),
+      loadedImage.width,
+      loadedImage.height
+    ));
+    const channels = getAvailableChannels(loadedImage);
+    setAvailableChannels(channels);
+
+    const initialVisibility = channels.reduce((acc, ch) => {
+      acc[ch.key] = true;
+      return acc;
+    }, {} as Record<string, boolean>);
+
+    setVisibleChannels(initialVisibility);
+    setPickedColor(null);
+  };
+
   const isImageTransparent = (data: Uint8ClampedArray): boolean => {
     for (let i = 3; i < data.length; i += 4) {
       if (data[i] < 255) return true;
     }
     return false;
+  };
+
+  const handlePixelPicked = (x: number, y: number, r: number, g: number, b: number) => {
+    const lab = rgbToLab(r, g, b);
+    setPickedColor({ x, y, r, g, b, ...lab });
   };
 
   const triggerDownload = (blob: Blob, fileName: string) => {
@@ -135,11 +208,39 @@ function App() {
         onSaveJpg={handleSaveAsJpg}
         onSaveGb7={handleSaveAsGb7}
         hasImage={!!image} />
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <Tooltip title="Курсор">
+          <IconButton
+            color={activeTool === 'cursor' ? 'primary' : 'default'}
+            onClick={() => setActiveTool('cursor')}
+          >
+            <CursorIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Пипетка">
+          <IconButton
+            color={activeTool === 'eyedropper' ? 'primary' : 'default'}
+            onClick={() => setActiveTool('eyedropper')}
+          >
+            <EyedropperIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
-        <CanvasView image={image} />
-
-        <RightToolbar />
+        <CanvasView
+          originalData={originalImageData}
+          visibleChannels={visibleChannels}
+          availableChannels={availableChannels}
+          activeTool={activeTool}
+          onPixelPicked={handlePixelPicked} />
+        <RightToolbar
+          originalData={originalImageData}
+          channels={availableChannels}
+          visibleState={visibleChannels}
+          onToggleChannel={(ch) => setVisibleChannels(prev => ({ ...prev, [ch]: !prev[ch] }))}
+          colorData={pickedColor}
+        />
       </Box>
 
       <StatusBar image={image} />

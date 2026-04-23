@@ -10,7 +10,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ image }) => {
     return (
         <Box
             sx={{
-                height: '3.2rem',
+                minHeight: '3.2rem',
                 backgroundColor: '#383838',
                 display: 'flex',
                 alignItems: 'center',
