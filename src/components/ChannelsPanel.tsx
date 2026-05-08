@@ -9,7 +9,7 @@ interface ChannelsPanelProps {
 }
 
 export const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ originalData, channels, visibleState, onToggleChannel }) => {
-    const createThumbnail = (channelIndex: number): string | null => {
+    const createThumbnail = (ch: ChannelConfig): string | null => {
         if (!originalData) return null;
 
         const size = 60;
@@ -25,12 +25,37 @@ export const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ originalData, chan
             originalData.height
         );
 
-        // Рисуем в градациях серого для превью
         for (let i = 0; i < tempImageData.data.length; i += 4) {
-            const val = tempImageData.data[i + channelIndex];
-            tempImageData.data[i] = val;
-            tempImageData.data[i + 1] = val;
-            tempImageData.data[i + 2] = val;
+            const val = tempImageData.data[i + ch.index];
+            if (ch.key === 'r') {
+                // Красный канал
+                tempImageData.data[i] = val;
+                tempImageData.data[i + 1] = 0;
+                tempImageData.data[i + 2] = 0;
+                tempImageData.data[i + 3] = 255;
+            } else if (ch.key === 'g') {
+                // Зеленый канал
+                tempImageData.data[i] = 0;
+                tempImageData.data[i + 1] = val;
+                tempImageData.data[i + 2] = 0;
+                tempImageData.data[i + 3] = 255;
+            } else if (ch.key === 'b') {
+                // Синий канал
+                tempImageData.data[i] = 0;
+                tempImageData.data[i + 1] = 0;
+                tempImageData.data[i + 2] = val;
+                tempImageData.data[i + 3] = 255;
+            } else if (ch.key === 'gray') {
+                // Gray
+                tempImageData.data[i] = val;
+                tempImageData.data[i + 1] = val;
+                tempImageData.data[i + 2] = val;
+                tempImageData.data[i + 3] = 255;
+            } else {
+                tempImageData.data[i] = 0;
+                tempImageData.data[i + 1] = 0;
+                tempImageData.data[i + 2] = 0;
+            }
         }
 
         ctx.putImageData(tempImageData, 0, 0);
@@ -41,7 +66,18 @@ export const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ originalData, chan
         const thumbCtx = thumbCanvas.getContext('2d');
         if (!thumbCtx) return null;
 
-        thumbCtx.drawImage(canvas, 0, 0, size, size);
+        const scaleX = size / originalData.width;
+        const scaleY = size / originalData.height;
+        const scale = Math.min(scaleX, scaleY);
+
+        const drawW = originalData.width * scale;
+        const drawH = originalData.height * scale;
+
+        const offsetX = (size - drawW) / 2;
+        const offsetY = (size - drawH) / 2;
+
+        thumbCtx.drawImage(canvas, offsetX, offsetY, drawW, drawH);
+
         return thumbCanvas.toDataURL();
     };
 
@@ -72,7 +108,7 @@ export const ChannelsPanel: React.FC<ChannelsPanelProps> = ({ originalData, chan
 
                             <Box
                                 component="img"
-                                src={createThumbnail(ch.index) || ''}
+                                src={createThumbnail(ch) || ''}
                                 sx={{ width: 40, height: 40, mr: 2, borderRadius: 0.5, border: '1px solid #ccc', objectFit: 'cover' }}
                             />
 

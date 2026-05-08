@@ -15,12 +15,13 @@ export const rgbToLab = (r: number, g: number, b: number): { L: number; A: numbe
 
     const f = (t: number) => (t > 0.008856 ? Math.pow(t, 1 / 3) : (7.787 * t + 16) / 116);
 
+    // Для D50 белой точки
     const L = 116 * f(y) - 16;
     const a = 500 * (f(x) - f(y));
     const bVal = 200 * (f(y) - f(z));
 
     return {
-        L: Math.round(L * 10) / 10, // Округление
+        L: Math.round(L * 10) / 10,     
         A: Math.round(a * 10) / 10,
         B: Math.round(bVal * 10) / 10
     };

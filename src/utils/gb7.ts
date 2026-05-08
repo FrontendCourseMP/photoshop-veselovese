@@ -14,7 +14,6 @@ export const GB7Service = {
 
         const flag = view.getUint8(5);
         const hasMask = (flag & 0x01) === 1;
-        console.log(hasMask);
         const width = view.getUint16(6, false);
         const height = view.getUint16(8, false);
 
