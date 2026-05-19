@@ -92,7 +92,6 @@ function App() {
 
         ctx.drawImage(bitmap, 0, 0);
         const imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
-        console.log('данные изображения:', imageData);
 
         const hasAlpha = isImageTransparent(imageData.data);
         const bitDepth = hasAlpha ? 32 : 24;
@@ -200,9 +199,17 @@ function App() {
 
   const handleLevelsApply = (newImageData: ImageData) => {
     if (!image) return;
+    const isUnchanged = !newImageData || newImageData.data.every((v, i) => v === originalImageData?.data[i]);
+    if (isUnchanged) {
+      setActiveTool('cursor');
+      setPreviewImageData(null);
+      return;
+    }
+
     setOriginalImageData(newImageData);
     setImage({ ...image, pixelData: newImageData });
     setPreviewImageData(null);
+    setActiveTool('cursor');
   }
 
   return (

@@ -11,7 +11,7 @@ type ChannelKey = 'master' | 'r' | 'g' | 'b' | 'a';
 interface LevelsConfig {
     black: number;
     white: number;
-    gamma: number;
+    midtone: number;
 }
 
 interface LevelsDialogProps {
@@ -22,7 +22,7 @@ interface LevelsDialogProps {
     originalData: ImageData | null;
 }
 
-const defaultConfig: LevelsConfig = { black: 0, white: 255, gamma: 128 };
+const defaultConfig: LevelsConfig = { black: 0, white: 255, midtone: 128 };
 
 export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     open, onClose, onApply, onPreviewChange, originalData
@@ -40,6 +40,9 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
 
     const histogramCanvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number | null>(null);
+
+    const settingsRef = useRef(settings);
+    useEffect(() => { settingsRef.current = settings; }, [settings]);
 
     // Расчет гистограммы
     const histogramData = useMemo(() => {
@@ -102,44 +105,117 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
         return lut;
     }, []);
 
-    // Применение уровней к данным (предпросмотр)
-    const applyPreview = useCallback(() => {
+    const calculateGammaFromMidtone = useCallback((black: number, midtone: number, white: number): number => {
+        const range = white - black;
+        const midPos = midtone - black;
+        if (range <= 0 || midPos <= 0 || midPos >= range) return 1.0;
+        // Формула: гамма, при которой середина диапазона отображается в 0.5
+        const gamma = Math.log(0.5) / Math.log(midPos / range);
+        return Math.max(0.1, Math.min(9.9, gamma));
+    }, []);
+
+    // Применение уровней к данным - предпросмотр
+    const applyPreview = useCallback((currentSettings?: Record<ChannelKey, LevelsConfig>) => {
         if (!originalData || !previewEnabled) {
             onPreviewChange(null);
             return;
         }
 
-        const cfg = settings[channel];
-        const range = Math.max(1, cfg.white - cfg.black);
-        const midPos = cfg.gamma - cfg.black;
-        let gamma = midPos === 0 || midPos === range ? 1.0 : Math.log(0.5) / Math.log(midPos / range);
-        gamma = Math.max(0.1, Math.min(9.9, gamma));
+        const cfg = currentSettings || settingsRef.current;
 
-        const createLUTForChannel = (black: number, white: number) => {
-            const r = Math.max(1, white - black);
-            const m = cfg.gamma - black;
-            const g = Math.max(0.1, Math.min(9.9, m === 0 || m === r ? 1.0 : Math.log(0.5) / Math.log(m / r)));
-            const invGamma = 1 / g;
-            const lut = new Uint8Array(256);
-            for (let i = 0; i < 256; i++) {
-                if (i <= black) {
-                    lut[i] = 0;
-                } else if (i >= white) {
-                    lut[i] = 255;
-                }
-                else {
-                    lut[i] = Math.round(255 * Math.pow((i - black) / r, invGamma));
-                }
-            }
-            return lut;
+        const isAllDefault = (c: LevelsConfig) => c.black === 0 && c.white === 255 && c.midtone === 128;
+        if (Object.values(cfg).every(isAllDefault)) {
+            onPreviewChange(null);
+            return;
+        }
+
+        const getLUT = (c: LevelsConfig) => {
+            const gamma = calculateGammaFromMidtone(c.black, c.midtone, c.white);
+            return createLUT(c.black, c.white, gamma);
         };
 
-        const masterLUT = channel === 'master' ? createLUTForChannel(cfg.black, cfg.white) : null;
+        const masterLUT = channel === 'master' ? getLUT(cfg.master) : null;
+        const rLUT = channel === 'master' ? masterLUT : getLUT(cfg.r);
+        const gLUT = channel === 'master' ? masterLUT : getLUT(cfg.g);
+        const bLUT = channel === 'master' ? masterLUT : getLUT(cfg.b);
+        const aLUT = channel === 'a' ? getLUT(cfg.a) : null;
 
-        const rLUT = channel === 'master' ? masterLUT : channel === 'r' ? createLUTForChannel(settings.r.black, settings.r.white) : null;
-        const gLUT = channel === 'master' ? masterLUT : channel === 'g' ? createLUTForChannel(settings.g.black, settings.g.white) : null;
-        const bLUT = channel === 'master' ? masterLUT : channel === 'b' ? createLUTForChannel(settings.b.black, settings.b.white) : null;
-        const aLUT = channel === 'a' ? createLUTForChannel(settings.a.black, settings.a.white) : null;
+        const newData = new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height);
+        const data = newData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            if (rLUT) data[i] = rLUT[data[i]];
+            if (gLUT) data[i + 1] = gLUT[data[i + 1]];
+            if (bLUT) data[i + 2] = bLUT[data[i + 2]];
+            if (aLUT) data[i + 3] = aLUT[data[i + 3]];
+        }
+        onPreviewChange(newData);
+    }, [originalData, previewEnabled, channel, createLUT, calculateGammaFromMidtone]);
+
+    // Обработчики ползунков с throttling
+    const updateSetting = useCallback((key: keyof LevelsConfig, value: number) => {
+        setSettings(prev => {
+            const current = prev[channel];
+            let updated = { ...current };
+            console.log(updated);
+            console.log('Updating', channel, key, value);
+
+            if (key === 'black') {
+                updated.black = Math.min(value, current.midtone - 1);
+            } else if (key === 'white') {
+                updated.white = Math.max(value, current.midtone + 1);
+            } else if (key === 'midtone') {
+                updated.midtone  = Math.max(current.black + 1, Math.min(value, current.white - 1));
+            }
+
+            return { ...prev, [channel]: updated };
+        });
+
+        if (rafRef.current) {
+            cancelAnimationFrame(rafRef.current);
+        }
+        rafRef.current = requestAnimationFrame(() => applyPreview());
+    }, [channel, applyPreview]);
+
+    const handleReset = () => {
+        const resetCfg = {
+            master: { ...defaultConfig }, r: { ...defaultConfig }, g: { ...defaultConfig }, b: { ...defaultConfig }, a: { ...defaultConfig }
+        };
+        setSettings(resetCfg);
+
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => applyPreview(resetCfg));
+    };
+
+    const handleApply = () => {
+        if (!originalData) {
+            onClose();
+            return;
+        }
+
+        const cfg = settingsRef.current[channel];
+
+        const isDefault = cfg.black === 0 && cfg.white === 255 && cfg.midtone === 128;
+        const allChannelsDefault = Object.values(settingsRef.current).every(
+            (c: LevelsConfig) => c.black === 0 && c.white === 255 && c.midtone === 128
+        );
+
+        if (allChannelsDefault) {
+            // Просто применяем оригинальные данные без LUT
+            onApply(new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height));
+            onClose();
+            return;
+        }
+
+        const getLUT = (c: LevelsConfig) => {
+            const gamma = calculateGammaFromMidtone(c.black, c.midtone, c.white);
+            return createLUT(c.black, c.white, gamma);
+        };
+
+        const masterLUT = channel === 'master' ? getLUT(settingsRef.current.master) : null;
+        const rLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.r);
+        const gLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.g);
+        const bLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.b);
+        const aLUT = channel === 'a' ? getLUT(settingsRef.current.a) : null;
 
         const newData = new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height);
         const data = newData.data;
@@ -150,59 +226,12 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
             if (bLUT) data[i + 2] = bLUT[data[i + 2]];
             if (aLUT) data[i + 3] = aLUT[data[i + 3]];
         }
-        onPreviewChange(newData);
-    }, [originalData, previewEnabled, settings, channel, createLUT, onPreviewChange]);
 
-    // Обработчики ползунков с throttling
-    const updateSetting = useCallback((key: keyof LevelsConfig, value: number) => {
-        setSettings(prev => {
-            const current = prev[channel];
-            let updated = { ...current, [key]: value };
-
-            updated.gamma = Math.max(updated.black + 1, Math.min(updated.gamma, updated.white - 1));
-            updated.black = Math.min(updated.black, updated.gamma - 1);
-            updated.white = Math.max(updated.white, updated.gamma + 1);
-
-            return { ...prev, [channel]: updated };
-        });
-
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => applyPreview());
-    }, [channel, applyPreview]);
-
-    const handleReset = () => {
-        setSettings(prev => ({ ...prev, [channel]: { ...defaultConfig } }));
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => applyPreview());
-    };
-
-    const handleApply = () => {
-        if (previewEnabled && originalData) {
-            applyPreview();
-        }
-
-        const newData = originalData ? new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height) : null;
-        if (newData) {
-            const cfg = settings[channel];
-            const masterLUT = channel === 'master' ? createLUT(cfg.black, cfg.white, cfg.gamma) : null;
-            const rLUT = channel === 'master' ? masterLUT : channel === 'r' ? createLUT(settings.r.black, settings.r.white, settings.r.gamma) : null;
-            const gLUT = channel === 'master' ? masterLUT : channel === 'g' ? createLUT(settings.g.black, settings.g.white, settings.g.gamma) : null;
-            const bLUT = channel === 'master' ? masterLUT : channel === 'b' ? createLUT(settings.b.black, settings.b.white, settings.b.gamma) : null;
-            const aLUT = channel === 'a' ? createLUT(settings.a.black, settings.a.white, settings.a.gamma) : null;
-
-            const d = newData.data;
-            for (let i = 0; i < d.length; i += 4) {
-                if (rLUT) d[i] = rLUT[d[i]];
-                if (gLUT) d[i + 1] = gLUT[d[i + 1]];
-                if (bLUT) d[i + 2] = bLUT[d[i + 2]];
-                if (aLUT) d[i + 3] = aLUT[d[i + 3]];
-            }
-            onApply(newData);
-        }
+        onApply(newData);
         onClose();
     };
 
-    // Сброс превью при закрытии/отмене
+    // Сброс превью при закрытии или отмене
     useEffect(() => {
         if (!open) {
             onPreviewChange(null);
@@ -239,31 +268,31 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                     <canvas ref={histogramCanvasRef} width={600} height={150} style={{ width: '100%', height: '100%' }} />
                 </Box>
 
-                <Box sx={{ px: 1 }}>
+                <Box sx={{ px: 1, mt: 2 }}>
                     <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa' }}>Точка черного</Typography>
                     <Slider
                         value={settings[channel].black}
                         min={0}
-                        max={254}
+                        max={255}
                         onChange={(_, v) => updateSetting('black', v as number)}
-                        sx={{ color: '#666', '& .MuiSlider-thumb': { width: 12, height: 12 } }}
+                        sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 12, height: 12 } }}
                     />
 
                     <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Гамма (Gamma)</span>
+                        <span>Полутона (Gamma)</span>
                     </Typography>
                     <Slider
-                        value={settings[channel].gamma}
-                        min={settings[channel].black + 1}
-                        max={settings[channel].white - 1}
-                        onChange={(_, v) => updateSetting('gamma', v as number)}
-                        sx={{ color: '#aaa', '& .MuiSlider-thumb': { width: 14, height: 14 } }}
+                        value={settings[channel].midtone}
+                        min={0}
+                        max={255}
+                        onChange={(_, v) => updateSetting('midtone', v as number)}
+                        sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 14, height: 14 } }}
                     />
 
                     <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa' }}>Точка белого</Typography>
                     <Slider
                         value={settings[channel].white}
-                        min={1}
+                        min={0}
                         max={255}
                         onChange={(_, v) => updateSetting('white', v as number)}
                         sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 12, height: 12 } }}
