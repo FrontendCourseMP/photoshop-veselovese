@@ -44,6 +44,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     const settingsRef = useRef(settings);
     useEffect(() => { settingsRef.current = settings; }, [settings]);
 
+
     // Расчет гистограммы
     const histogramData = useMemo(() => {
         if (!originalData) return new Array(256).fill(0);
@@ -63,23 +64,30 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
         return hist;
     }, [originalData, channel]);
 
-    // Отрисовка гистограммы
     useEffect(() => {
-        if (!open || !histogramCanvasRef.current || histogramData.length === 0) return;
+        if (!open || !originalData || histogramData.every(v => v === 0)) return;
 
-        const canvas = histogramCanvasRef.current;
-        if (!canvas || histogramData.length === 0) return;
+        let animationFrameId: number;
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        const rafId = requestAnimationFrame(() => {
+        const drawHistogram = () => {
+            const canvas = histogramCanvasRef.current;
+
+            if (!canvas) {
+                animationFrameId = requestAnimationFrame(drawHistogram);
+                return;
+            }
+
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Очищаем и рисуем
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const maxVal = Math.max(...histogramData);
-            const scaleX = canvas.width / 255;
-            const scaleY = canvas.height / (logScale ? Math.log1p(maxVal) : maxVal || 1);
-            const divisor = logScale ? Math.log1p(maxVal || 1) : (maxVal || 1);
+            if (maxVal === 0) return;
 
+            const scaleX = canvas.width / 255;
+            const divisor = logScale ? Math.log1p(maxVal) : maxVal;
 
             ctx.fillStyle = '#aaa';
             histogramData.forEach((count, i) => {
@@ -87,10 +95,14 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                 const h = (height / divisor) * canvas.height;
                 ctx.fillRect(i * scaleX, canvas.height - h, scaleX, Math.max(0, h));
             });
-        });
-        return () => cancelAnimationFrame(rafId);
+        };
 
-    }, [open, histogramData, logScale]);
+        drawHistogram();
+
+        return () => {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        };
+    }, [open, histogramData, logScale, originalData]);
 
     // Генерация LUT
     const createLUT = useCallback((black: number, white: number, gamma: number) => {
@@ -109,7 +121,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
         const range = white - black;
         const midPos = midtone - black;
         if (range <= 0 || midPos <= 0 || midPos >= range) return 1.0;
-        // Формула: гамма, при которой середина диапазона отображается в 0.5
+        // гамма, при которой середина диапазона отображается в 0.5
         const gamma = Math.log(0.5) / Math.log(midPos / range);
         return Math.max(0.1, Math.min(9.9, gamma));
     }, []);
@@ -164,7 +176,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
             } else if (key === 'white') {
                 updated.white = Math.max(value, current.midtone + 1);
             } else if (key === 'midtone') {
-                updated.midtone  = Math.max(current.black + 1, Math.min(value, current.white - 1));
+                updated.midtone = Math.max(current.black + 1, Math.min(value, current.white - 1));
             }
 
             return { ...prev, [channel]: updated };
