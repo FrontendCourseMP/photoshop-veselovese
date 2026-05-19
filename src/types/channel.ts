@@ -1,4 +1,5 @@
-export type ChannelKey = 'r' | 'g' | 'b' | 'a' | 'gray';
+export type ChannelKey = 'master' | 'r' | 'g' | 'b' | 'a' | 'gray';
+
 
 export interface ChannelConfig {
     key: ChannelKey;

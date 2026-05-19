@@ -9,7 +9,7 @@ import { CanvasView } from './components/CanvasView';
 import { RightToolbar } from './components/RightToolbar';
 import { MainToolbar } from './components/MainToolbar';
 import { TLoadedImage, IPNGImage, IJPEGImage } from './types/image';
-import { ChannelConfig } from './types/channel';
+import { ChannelConfig, ChannelKey } from './types/channel';
 
 import { GB7Service } from './utils/gb7';
 import { rgbToLab } from './utils/color';
@@ -212,6 +212,25 @@ function App() {
     setActiveTool('cursor');
   }
 
+  const getMaxValue = (image: TLoadedImage | null): number => {
+    if (!image) return 255;
+    return image.format === 'GB7' ? 127 : 255;
+  };
+
+  const getAvailableChannelKeys = (image: TLoadedImage | null): ChannelKey[] => {
+    if (!image) return ['master', 'r', 'g', 'b', 'a'];
+
+    if (image.format === 'GB7') {
+      const channels: ChannelKey[] = ['master', 'gray'];
+      if ('hasMask' in image && image.hasMask) channels.push('a');
+      return channels;
+    } else {
+      const channels: ChannelKey[] = ['master', 'r', 'g', 'b'];
+      if (image.bitDepth === 32) channels.push('a');
+      return channels;
+    }
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <MainToolbar fileInputRef={fileInputRef}
@@ -254,6 +273,8 @@ function App() {
         onApply={handleLevelsApply}
         onPreviewChange={setPreviewImageData}
         originalData={originalImageData}
+        maxValue={getMaxValue(image)}
+        availableChannelKeys={getAvailableChannelKeys(image)}
       />
     </Box>
   );
