@@ -1,6 +1,6 @@
 import { Box, Tooltip, IconButton } from "@mui/material";
 import {
-    Colorize as EyedropperIcon, PanTool as CursorIcon
+    Colorize as EyedropperIcon, PanTool as CursorIcon, Tune as TuneIcon
 } from '@mui/icons-material';
 import { Tool } from "../types/tool";
 
@@ -50,6 +50,11 @@ export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect }) =>
                     <EyedropperIcon />
                 </IconButton>
             </Tooltip>
+            <Tooltip title="Уровни (Levels)">
+             <IconButton onClick={() => onToolSelect('levels')}>
+                <TuneIcon />
+             </IconButton>
+           </Tooltip>
         </Box>
     );
 };

@@ -5,6 +5,7 @@ import { Tool } from '../types/tool';
 
 interface CanvasViewProps {
     originalData: ImageData | null;
+    previewData?: ImageData | null;
     visibleChannels: Record<string, boolean>;
     availableChannels: ChannelConfig[];
     activeTool: Tool;
@@ -13,6 +14,7 @@ interface CanvasViewProps {
 
 export const CanvasView: React.FC<CanvasViewProps> = ({
     originalData,
+    previewData,
     visibleChannels,
     availableChannels,
     activeTool,
@@ -21,25 +23,24 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
-        if (!originalData || !canvasRef.current) return;
+        const sourceData = previewData || originalData;
+        if (!sourceData || !canvasRef.current) return;
 
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        canvas.width = originalData.width;
-        canvas.height = originalData.height;
+        canvas.width = sourceData.width;
+        canvas.height = sourceData.height;
 
-        const newBuffer = new Uint8ClampedArray(originalData.data);
+        const newBuffer = new Uint8ClampedArray(sourceData.data);
         const len = newBuffer.length;
 
         availableChannels.forEach(ch => {
             if (ch.key === 'gray') return;
 
             if (!visibleChannels[ch.key]) {
-                for (let i = ch.index; i < len; i += 4) {
-                    newBuffer[i] = 0;
-                }
+                for (let i = ch.index; i < len; i += 4) newBuffer[i] = 0;
             }
         });
 
@@ -47,9 +48,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         if (grayChannel) {
             if (!visibleChannels['gray']) {
                 for (let i = 0; i < len; i += 4) {
-                    newBuffer[i] = 0;       // R
-                    newBuffer[i + 1] = 0;   // G
-                    newBuffer[i + 2] = 0;   // B
+                    newBuffer[i] = 0; newBuffer[i + 1] = 0; newBuffer[i + 2] = 0;
                 }
             }
         }
@@ -58,16 +57,14 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
         if (alphaChannel) {
             if (!visibleChannels['a']) {
                 // Делаем пиксели непрозрачными (255)
-                for (let i = 3; i < len; i += 4) {
-                    newBuffer[i] = 255;
-                }
+                for (let i = 3; i < len; i += 4) newBuffer[i] = 255;
             }
         }
 
-        const renderedImageData = new ImageData(newBuffer, originalData.width, originalData.height);
+        const renderedImageData = new ImageData(newBuffer, sourceData.width, sourceData.height);
         ctx.putImageData(renderedImageData, 0, 0);
 
-    }, [originalData, visibleChannels, availableChannels]);
+    }, [previewData, originalData, visibleChannels, availableChannels]);
 
     const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
         if (activeTool !== 'eyedropper' || !originalData || !canvasRef.current) return;

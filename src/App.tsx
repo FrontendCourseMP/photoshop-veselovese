@@ -15,16 +15,20 @@ import { GB7Service } from './utils/gb7';
 import { rgbToLab } from './utils/color';
 import { ToolBar } from './components/ToolBar';
 import { Tool } from './types/tool';
+import { LevelsDialog } from './components/LevelsDialog';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [originalImageData, setOriginalImageData] = useState<ImageData | null>(null);
+  const [previewImageData, setPreviewImageData] = useState<ImageData | null>(null);
+
   const [availableChannels, setAvailableChannels] = useState<ChannelConfig[]>([]);
   const [visibleChannels, setVisibleChannels] = useState<Record<string, boolean>>({});
   const [activeTool, setActiveTool] = useState<Tool>('cursor');
   const [pickedColor, setPickedColor] = useState<{ x: number; y: number; r: number; g: number; b: number; L: number; A: number; B: number } | null>(null);
+  const [isLevelsOpen, setIsLevelsOpen] = useState(true);
 
   const getAvailableChannels = (image: TLoadedImage | null): ChannelConfig[] => {
     if (!image) return [];
@@ -194,6 +198,13 @@ function App() {
     triggerDownload(blob, newName);
   };
 
+  const handleLevelsApply = (newImageData: ImageData) => {
+    if (!image) return;
+    setOriginalImageData(newImageData);
+    setImage({ ...image, pixelData: newImageData });
+    setPreviewImageData(null);
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <MainToolbar fileInputRef={fileInputRef}
@@ -206,11 +217,15 @@ function App() {
 
       <ToolBar
         activeTool={activeTool}
-        onToolSelect={(tool) => setActiveTool(tool)} />
+        onToolSelect={(tool) => {
+          if (tool === 'levels' && !originalImageData) return;
+          setActiveTool(tool)
+        }} />
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         <CanvasView
           originalData={originalImageData}
+          previewData={previewImageData}
           visibleChannels={visibleChannels}
           availableChannels={availableChannels}
           activeTool={activeTool}
@@ -225,6 +240,14 @@ function App() {
       </Box>
 
       <StatusBar image={image} />
+
+      <LevelsDialog
+        open={activeTool === 'levels' && !!originalImageData}
+        onClose={() => setActiveTool('cursor')}
+        onApply={handleLevelsApply}
+        onPreviewChange={setPreviewImageData}
+        originalData={originalImageData}
+      />
     </Box>
   );
 }

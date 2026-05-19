@@ -1,1 +1,1 @@
-export type Tool = 'cursor' | 'eyedropper';
+export type Tool = 'cursor' | 'eyedropper' | 'levels';
