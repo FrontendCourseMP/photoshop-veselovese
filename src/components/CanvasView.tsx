@@ -10,6 +10,7 @@ interface CanvasViewProps {
     availableChannels: ChannelConfig[];
     activeTool: Tool;
     onPixelPicked?: (x: number, y: number, r: number, g: number, b: number) => void;
+    viewScale: number;
 }
 
 export const CanvasView: React.FC<CanvasViewProps> = ({
@@ -18,8 +19,10 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     visibleChannels,
     availableChannels,
     activeTool,
+    viewScale,
     onPixelPicked
 }) => {
+    console.log('CanvasView rendered with viewScale:', viewScale);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -111,7 +114,8 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
                         maxWidth: 'calc(100% - 2.4rem*2)',
                         maxHeight: 'calc(100% - 2.4rem*2)',
                         width: 'auto',
-                        height: 'auto'
+                        height: 'auto',
+                        transform: `scale(${viewScale})`,
                     }}
                 />
             )}

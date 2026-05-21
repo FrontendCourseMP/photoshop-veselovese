@@ -51,10 +51,15 @@ export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect }) =>
                 </IconButton>
             </Tooltip>
             <Tooltip title="Уровни (Levels)">
-             <IconButton onClick={() => onToolSelect('levels')}>
-                <TuneIcon />
-             </IconButton>
-           </Tooltip>
+                <IconButton onClick={() => onToolSelect('levels')}>
+                    <TuneIcon />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title="Изменение размера">
+                <IconButton onClick={() => onToolSelect('resize')}>
+                    <TuneIcon />
+                </IconButton>
+            </Tooltip>
         </Box>
     );
 };

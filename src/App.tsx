@@ -16,6 +16,8 @@ import { rgbToLab } from './utils/color';
 import { ToolBar } from './components/ToolBar';
 import { Tool } from './types/tool';
 import { LevelsDialog } from './components/LevelsDialog';
+import { InterpolationMethod, resizeImage } from './utils/interpolation';
+import { ResizeDialog } from './components/ResizeDialog';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
@@ -28,7 +30,16 @@ function App() {
   const [visibleChannels, setVisibleChannels] = useState<Record<string, boolean>>({});
   const [activeTool, setActiveTool] = useState<Tool>('cursor');
   const [pickedColor, setPickedColor] = useState<{ x: number; y: number; r: number; g: number; b: number; L: number; A: number; B: number } | null>(null);
-  const [isLevelsOpen, setIsLevelsOpen] = useState(true);
+
+  const [viewScale, setViewScale] = useState<number>(100);
+  const [interpolationMethod, setInterpolationMethod] = useState<InterpolationMethod>('bilinear');
+
+  // const calculateInitialScale = (imgW: number, imgH: number) => {
+  //   const availW = window.innerWidth - 350;
+  //   const availH = window.innerHeight - 180;
+  //   const fitScale = Math.min(availW / imgW, availH / imgH) * 100;
+  //   return Math.max(12, Math.min(300, Math.round(fitScale)));
+  // };
 
   const getAvailableChannels = (image: TLoadedImage | null): ChannelConfig[] => {
     if (!image) return [];
@@ -129,6 +140,20 @@ function App() {
 
     setVisibleChannels(initialVisibility);
     setPickedColor(null);
+
+    setViewScale(100);
+  };
+
+  const handleResizeApply = (_: any, targetW: number, targetH: number) => {
+    if (!image) return;
+    if (!originalImageData) return;
+
+    // Применяем интерполяцию
+    const resizedData = resizeImage(originalImageData, targetW, targetH, interpolationMethod);
+
+    setImage(prev => prev ? { ...prev, width: targetW, height: targetH, pixelData: resizedData } : null);
+    setOriginalImageData(resizedData);
+    setActiveTool('cursor');
   };
 
   const isImageTransparent = (data: Uint8ClampedArray): boolean => {
@@ -244,7 +269,7 @@ function App() {
       <ToolBar
         activeTool={activeTool}
         onToolSelect={(tool) => {
-          if (tool === 'levels' && !originalImageData) return;
+          if ((tool === 'levels' || tool == 'resize') && !originalImageData) return;
           setActiveTool(tool)
         }} />
 
@@ -255,6 +280,7 @@ function App() {
           visibleChannels={visibleChannels}
           availableChannels={availableChannels}
           activeTool={activeTool}
+          viewScale={viewScale / 100}
           onPixelPicked={handlePixelPicked} />
         <RightToolbar
           originalData={originalImageData}
@@ -265,7 +291,11 @@ function App() {
         />
       </Box>
 
-      <StatusBar image={image} />
+      <StatusBar
+        image={image}
+        viewScale={viewScale}
+        onScaleChange={setViewScale}
+      />
 
       <LevelsDialog
         open={activeTool === 'levels' && !!originalImageData}
@@ -275,6 +305,14 @@ function App() {
         originalData={originalImageData}
         maxValue={getMaxValue(image)}
         availableChannelKeys={getAvailableChannelKeys(image)}
+      />
+
+      <ResizeDialog
+        open={activeTool === 'resize' && !!originalImageData}
+        onClose={() => setActiveTool('cursor')}
+        onApply={handleResizeApply}
+        originalWidth={originalImageData?.width || 0}
+        originalHeight={originalImageData?.height || 0}
       />
     </Box>
   );
