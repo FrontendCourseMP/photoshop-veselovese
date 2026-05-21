@@ -6,12 +6,13 @@ import {
     Switch
 } from '@mui/material';
 import { ChannelKey } from '../types/channel';
-
-interface LevelsConfig {
-    black: number;
-    white: number;
-    midtone: number;
-}
+import {
+    LevelsSettings,
+    createDefaultSettings,
+    applyLevelsToImageData,
+    calculateHistogram,
+    updateLevelSetting as updateLevelSettingUtil
+} from '../utils/levels';
 
 interface LevelsDialogProps {
     open: boolean;
@@ -23,138 +24,56 @@ interface LevelsDialogProps {
     availableChannelKeys: ChannelKey[];
 }
 
-const defaultConfig = (maxValue: number): LevelsConfig => ({
-    black: 0,
-    white: maxValue,
-    midtone: Math.round(maxValue / 2)
-});
-
 export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     open, onClose, onApply, onPreviewChange, originalData, maxValue, availableChannelKeys
 }) => {
     const [channel, setChannel] = useState<ChannelKey>('master');
     const [logScale, setLogScale] = useState(false);
     const [previewEnabled, setPreviewEnabled] = useState(true);
-    const [settings, setSettings] = useState<Record<ChannelKey, LevelsConfig>>(() => {
-        const cfg = defaultConfig(255);
-        return {
-            master: { ...cfg },
-            r: { ...cfg },
-            g: { ...cfg },
-            b: { ...cfg },
-            a: { ...cfg },
-            gray: { ...cfg }
-        };
-    });
+    const [settings, setSettings] = useState<LevelsSettings>(() =>
+        createDefaultSettings(255)
+    );
 
     const histogramCanvasRef = useRef<HTMLCanvasElement>(null);
     const rafRef = useRef<number | null>(null);
     const settingsRef = useRef(settings);
+
     useEffect(() => { settingsRef.current = settings; }, [settings]);
-
-    const processImageData = useCallback((currentSettings: Record<ChannelKey, LevelsConfig>): ImageData | null => {
-        if (!originalData) return null;
-
-        const isDefault = (c: LevelsConfig) => c.black === 0 && c.white === maxValue && c.midtone === Math.round(maxValue / 2);
-        if (Object.values(currentSettings).every(isDefault)) return null; // Без изменений
-
-        // Преобразование логических в физические
-        const toPhys = (v: number) => Math.round(v * (255 / maxValue));
-
-        const buildLUT = (c: LevelsConfig) => {
-            const b = toPhys(c.black), w = toPhys(c.white);
-            const range = Math.max(1, w - b);
-            const mRange = c.white - c.black, mPos = c.midtone - c.black;
-            let gamma = (mRange > 0 && mPos > 0 && mPos < mRange) ? Math.log(0.5) / Math.log(mPos / mRange) : 1.0;
-            gamma = Math.max(0.1, Math.min(9.9, gamma));
-            const invGamma = 1 / gamma;
-
-            const lut = new Uint8Array(256);
-            for (let i = 0; i < 256; i++) {
-                if (i <= b) lut[i] = 0;
-                else if (i >= w) lut[i] = 255;
-                else lut[i] = Math.round(255 * Math.pow((i - b) / range, invGamma));
-            }
-            return lut;
-        };
-
-        // const masterLUT = channel === 'master' ? buildLUT(currentSettings.master) : null;
-        // const getLUT = (k: ChannelKey) => channel === 'master' ? masterLUT : buildLUT(currentSettings[k]);
-
-        // const rLUT = (channel === 'master' || channel === 'r' || channel === 'gray') ? getLUT(channel === 'gray' ? 'gray' : 'r') : null;
-        // const gLUT = (channel === 'master' || channel === 'g') ? getLUT('g') : null;
-        // const bLUT = (channel === 'master' || channel === 'b') ? getLUT('b') : null;
-        // const aLUT = channel === 'a' ? buildLUT(currentSettings.a) : null;
-
-        let rLUT: Uint8Array | null = null;
-        let gLUT: Uint8Array | null = null;
-        let bLUT: Uint8Array | null = null;
-        let aLUT: Uint8Array | null = null;
-
-        if (channel === 'master') {
-            const lut = buildLUT(currentSettings.master);
-            rLUT = gLUT = bLUT = lut;
-        } else if (channel === 'gray') {
-            const lut = buildLUT(currentSettings.gray);
-            rLUT = gLUT = bLUT = lut;
-        } else if (channel === 'r') {
-            rLUT = buildLUT(currentSettings.r);
-        } else if (channel === 'g') {
-            gLUT = buildLUT(currentSettings.g);
-        } else if (channel === 'b') {
-            bLUT = buildLUT(currentSettings.b);
-        } else if (channel === 'a') {
-            aLUT = buildLUT(currentSettings.a);
-        }
-
-        const newData = new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height);
-        const d = newData.data;
-        for (let i = 0; i < d.length; i += 4) {
-            if (rLUT) d[i] = rLUT[d[i]];
-            if (gLUT) d[i + 1] = gLUT[d[i + 1]];
-            if (bLUT) d[i + 2] = bLUT[d[i + 2]];
-            if (aLUT) d[i + 3] = aLUT[d[i + 3]];
-        }
-        return newData;
-    }, [originalData, channel, maxValue]);
 
     const applyPreview = useCallback(() => {
         if (!originalData || !previewEnabled) {
             onPreviewChange(null);
             return;
         }
-        const result = processImageData(settingsRef.current);
+        const result = applyLevelsToImageData(originalData, settingsRef.current, channel, maxValue);
         onPreviewChange(result);
-    }, [originalData, previewEnabled, processImageData]);
+    }, [originalData, previewEnabled, channel, maxValue]);
 
-    const updateSetting = useCallback((key: keyof LevelsConfig, value: number) => {
-        setSettings(prev => {
-            const current = prev[channel];
-            let updated = { ...current };
-            if (key === 'black') updated.black = Math.min(value, current.midtone - 1);
-            else if (key === 'white') updated.white = Math.max(value, current.midtone + 1);
-            else if (key === 'midtone') updated.midtone = Math.max(current.black + 1, Math.min(value, current.white - 1));
-            return { ...prev, [channel]: updated };
-        });
+    const updateSetting = useCallback((key: keyof LevelsSettings['master'], value: number) => {
+        setSettings(prev => updateLevelSettingUtil(prev, channel, key, value));
+
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => applyPreview());
     }, [channel, applyPreview]);
 
     const handleReset = () => {
-        const cfg = defaultConfig(maxValue);
-        const resetCfg = { master: { ...cfg }, r: { ...cfg }, g: { ...cfg }, b: { ...cfg }, a: { ...cfg }, gray: { ...cfg } };
+        const resetCfg = createDefaultSettings(maxValue);
         setSettings(resetCfg);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => applyPreview());
     };
 
     const handleApply = () => {
-        const result = processImageData(settingsRef.current);
+        const result = applyLevelsToImageData(originalData!, settingsRef.current, channel, maxValue);
         if (result) {
             onApply(result);
         } else {
             // Если изменений нет, просто применяем оригинал
-            onApply(new ImageData(new Uint8ClampedArray(originalData!.data), originalData!.width, originalData!.height));
+            onApply(new ImageData(
+                new Uint8ClampedArray(originalData!.data),
+                originalData!.width,
+                originalData!.height
+            ));
         }
         onClose();
     };
@@ -162,38 +81,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     // Расчет гистограммы
     const histogramData = useMemo(() => {
         if (!originalData) return new Array(256).fill(0);
-
-        const hist = new Array(256).fill(0);
-        const data = originalData.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-            let val: number;
-
-            if (channel === 'master') {
-                if (maxValue === 127) {
-                    // Для GB7: master = grayscale (первый канал)
-                    val = data[i];
-                } else {
-                    // Для RGB: формула светлоты
-                    val = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-                }
-            } else if (channel === 'gray') {
-                val = data[i];
-            } else if (channel === 'a') {
-                val = data[i + 3];
-            } else if (channel === 'r') {
-                val = data[i];
-            } else if (channel === 'g') {
-                val = data[i + 1];
-            } else if (channel === 'b') {
-                val = data[i + 2];
-            } else {
-                val = data[i];
-            }
-
-            hist[Math.min(maxValue, Math.round(val * (maxValue / 255)))]++;
-        }
-        return hist;
+        return calculateHistogram(originalData, channel, maxValue);
     }, [originalData, channel, maxValue]);
 
     useEffect(() => {
@@ -212,7 +100,6 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
-            // Очищаем и рисуем
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const maxVal = Math.max(...histogramData);
@@ -243,174 +130,12 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
         };
     }, [open, histogramData, logScale, originalData, maxValue]);
 
-    // Генерация LUT
-    // const createLUT = useCallback((black: number, white: number, gamma: number) => {
-    //     const lut = new Uint8Array(256);
-    //     const range = Math.max(1, white - black);
-    //     const invGamma = 1 / Math.max(0.01, gamma);
-    //     for (let i = 0; i < 256; i++) {
-    //         if (i <= black) lut[i] = 0;
-    //         else if (i >= white) lut[i] = 255;
-    //         else lut[i] = Math.round(255 * Math.pow((i - black) / range, invGamma));
-    //     }
-    //     return lut;
-    // }, []);
-
-    // const calculateGammaFromMidtone = useCallback((black: number, midtone: number, white: number): number => {
-    //     const range = white - black;
-    //     const midPos = midtone - black;
-    //     if (range <= 0 || midPos <= 0 || midPos >= range) return 1.0;
-    //     // гамма, при которой середина диапазона отображается в 0.5
-    //     const gamma = Math.log(0.5) / Math.log(midPos / range);
-    //     return Math.max(0.1, Math.min(9.9, gamma));
-    // }, []);
-
-    // const logicalToPhysical = (logical: number, maxValue: number): number => {
-    //     return Math.round(logical * (255 / maxValue));
-    // };
-
-    // Применение уровней к данным - предпросмотр
-    // const applyPreview = useCallback((currentSettings?: Record<ChannelKey, LevelsConfig>) => {
-    //     if (!originalData || !previewEnabled) {
-    //         onPreviewChange(null);
-    //         return;
-    //     }
-
-    //     const cfg = currentSettings || settingsRef.current;
-
-    //     const isAllDefault = (c: LevelsConfig) => c.black === 0 && c.white === maxValue && c.midtone === Math.round(maxValue / 2);
-    //     if (Object.values(cfg).every(isAllDefault)) {
-    //         onPreviewChange(null);
-    //         return;
-    //     }
-
-    //     const getLUT = (c: LevelsConfig) => {
-    //         const blackPhys = logicalToPhysical(c.black, maxValue);
-    //         const whitePhys = logicalToPhysical(c.white, maxValue);
-    //         const midtonePhys = logicalToPhysical(c.midtone, maxValue);
-
-    //         const gamma = calculateGammaFromMidtone(c.black, c.midtone, c.white);
-    //         return createLUT(blackPhys, whitePhys, gamma);
-    //     };
-
-    //     const masterLUT = channel === 'master' ? getLUT(cfg.master) : null;
-
-    //     const rLUT = channel === 'master' ? masterLUT :
-    //         channel === 'r' || channel === 'gray' ? getLUT(cfg[channel]) : null;
-    //     const gLUT = channel === 'master' ? masterLUT :
-    //         channel === 'g' ? getLUT(cfg.g) : null;
-    //     const bLUT = channel === 'master' ? masterLUT :
-    //         channel === 'b' ? getLUT(cfg.b) : null;
-    //     const aLUT = channel === 'a' ? getLUT(cfg.a) : null;
-
-    //     const newData = new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height);
-    //     const data = newData.data;
-    //     for (let i = 0; i < data.length; i += 4) {
-    //         if (rLUT) data[i] = rLUT[data[i]];
-    //         if (gLUT) data[i + 1] = gLUT[data[i + 1]];
-    //         if (bLUT) data[i + 2] = bLUT[data[i + 2]];
-    //         if (aLUT) data[i + 3] = aLUT[data[i + 3]];
-    //     }
-    //     onPreviewChange(newData);
-    // }, [originalData, previewEnabled, channel, maxValue, createLUT, calculateGammaFromMidtone]);
-
-    // Обработчики ползунков с throttling
-    // const updateSetting = useCallback((key: keyof LevelsConfig, value: number) => {
-    //     setSettings(prev => {
-    //         const current = prev[channel];
-    //         let updated = { ...current };
-    //         console.log(updated);
-    //         console.log('Updating', channel, key, value);
-
-    //         if (key === 'black') {
-    //             updated.black = Math.min(value, current.midtone - 1);
-    //         } else if (key === 'white') {
-    //             updated.white = Math.max(value, current.midtone + 1);
-    //         } else if (key === 'midtone') {
-    //             updated.midtone = Math.max(current.black + 1, Math.min(value, current.white - 1));
-    //         }
-
-    //         return { ...prev, [channel]: updated };
-    //     });
-
-    //     if (rafRef.current) {
-    //         cancelAnimationFrame(rafRef.current);
-    //     }
-    //     rafRef.current = requestAnimationFrame(() => applyPreview());
-    // }, [channel, applyPreview, maxValue]);
-
-    // const handleReset = () => {
-    //     const cfg = defaultConfig(maxValue);
-    //     const resetCfg = {
-    //         master: { ...cfg }, r: { ...cfg }, g: { ...cfg }, b: { ...cfg }, a: { ...cfg }, gray: { ...cfg }
-    //     };
-    //     setSettings(resetCfg);
-
-    //     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    //     rafRef.current = requestAnimationFrame(() => applyPreview(resetCfg));
-    // };
-
-    // const handleApply = () => {
-    //     if (!originalData) {
-    //         onClose();
-    //         return;
-    //     }
-
-    //     const cfg = settingsRef.current[channel];
-
-    //     const isDefault = cfg.black === 0 && cfg.white === maxValue && cfg.midtone === Math.round(maxValue / 2);
-    //     const allChannelsDefault = Object.values(settingsRef.current).every(
-    //         (c: LevelsConfig) => c.black === 0 && c.white === maxValue && c.midtone === Math.round(maxValue / 2)
-    //     );
-
-    //     if (allChannelsDefault) {
-    //         // Просто применяем оригинальные данные без LUT
-    //         onApply(new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height));
-    //         onClose();
-    //         return;
-    //     }
-
-    //     const getLUT = (c: LevelsConfig) => {
-    //         const gamma = calculateGammaFromMidtone(c.black, c.midtone, c.white);
-    //         return createLUT(c.black, c.white, gamma);
-    //     };
-
-    //     const masterLUT = channel === 'master' ? getLUT(settingsRef.current.master) : null;
-    //     const rLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.r);
-    //     const gLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.g);
-    //     const bLUT = channel === 'master' ? masterLUT : getLUT(settingsRef.current.b);
-    //     const aLUT = channel === 'a' ? getLUT(settingsRef.current.a) : null;
-
-    //     const newData = new ImageData(new Uint8ClampedArray(originalData.data), originalData.width, originalData.height);
-    //     const data = newData.data;
-
-    //     for (let i = 0; i < data.length; i += 4) {
-    //         if (rLUT) data[i] = rLUT[data[i]];
-    //         if (gLUT) data[i + 1] = gLUT[data[i + 1]];
-    //         if (bLUT) data[i + 2] = bLUT[data[i + 2]];
-    //         if (aLUT) data[i + 3] = aLUT[data[i + 3]];
-    //     }
-
-    //     onApply(newData);
-    //     onClose();
-    // };
-
     // Сброс превью при закрытии или отмене
     useEffect(() => {
         if (!open) {
             onPreviewChange(null);
             setPreviewEnabled(true);
-
-            const cfg = defaultConfig(maxValue);
-            setSettings({
-                master: { ...cfg },
-                r: { ...cfg },
-                g: { ...cfg },
-                b: { ...cfg },
-                a: { ...cfg },
-                gray: { ...cfg }
-            });
-
+            setSettings(createDefaultSettings(maxValue));
             setChannel('master');
         }
     }, [open, maxValue]);
