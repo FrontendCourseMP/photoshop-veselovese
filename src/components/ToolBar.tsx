@@ -1,15 +1,16 @@
 import { Box, Tooltip, IconButton } from "@mui/material";
 import {
-    Colorize as EyedropperIcon, PanTool as CursorIcon, Tune as TuneIcon
+    Colorize as EyedropperIcon, PanTool as CursorIcon, Tune as TuneIcon, PhotoSizeSelectLarge as ResizeIcon
 } from '@mui/icons-material';
 import { Tool } from "../types/tool";
 
 interface ToolBarProps {
     activeTool: Tool;
     onToolSelect: (tool: Tool) => void;
+    hasImage: boolean;
 }
 
-export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect }) => {
+export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect, hasImage }) => {
     return (
         <Box sx={{
             display: 'flex',
@@ -32,7 +33,8 @@ export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect }) =>
                         }
                     }}
                 >
-                    <CursorIcon />
+                    <CursorIcon
+                        style={{ color: '#ccc' }} />
                 </IconButton>
             </Tooltip>
             <Tooltip title="Пипетка">
@@ -47,17 +49,39 @@ export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect }) =>
                         }
                     }}
                 >
-                    <EyedropperIcon />
+                    <EyedropperIcon
+                        style={{ color: '#ccc' }} />
                 </IconButton>
             </Tooltip>
-            <Tooltip title="Уровни (Levels)">
-                <IconButton onClick={() => onToolSelect('levels')}>
-                    <TuneIcon />
+            <Tooltip title="Уровни">
+                <IconButton onClick={() => onToolSelect('levels')}
+                    sx={{
+                        p: 0,
+                        alignItems: 'start',
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '2.4rem',
+                        }
+                    }}
+                    disabled={!hasImage}>
+                    <TuneIcon
+                        style={{ color: '#ccc' }} />
                 </IconButton>
             </Tooltip>
-            <Tooltip title="Изменение размера">
-                <IconButton onClick={() => onToolSelect('resize')}>
-                    <TuneIcon />
+            <Tooltip title="Изменение размера" sx={{ fontSize: '1.4rem' }}>
+                <IconButton onClick={() => onToolSelect('resize')}
+                    sx={{
+                        p: 0,
+                        alignItems: 'start',
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '2.4rem',
+                        },
+                        '&.Mui-disabled & .MuiSvgIcon-root': {
+                            color: '#738388',
+                        }
+                    }}
+                    disabled={!hasImage}>
+                    <ResizeIcon
+                        style={{ color: '#ccc' }} />
                 </IconButton>
             </Tooltip>
         </Box>

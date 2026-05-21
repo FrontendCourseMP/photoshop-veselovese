@@ -34,12 +34,12 @@ function App() {
   const [viewScale, setViewScale] = useState<number>(100);
   const [interpolationMethod, setInterpolationMethod] = useState<InterpolationMethod>('bilinear');
 
-  // const calculateInitialScale = (imgW: number, imgH: number) => {
-  //   const availW = window.innerWidth - 350;
-  //   const availH = window.innerHeight - 180;
-  //   const fitScale = Math.min(availW / imgW, availH / imgH) * 100;
-  //   return Math.max(12, Math.min(300, Math.round(fitScale)));
-  // };
+  const calculateInitialScale = (imgW: number, imgH: number) => {
+    const availW = window.innerWidth - 350;
+    const availH = window.innerHeight - 180;
+    const fitScale = Math.min(availW / imgW, availH / imgH) * 100;
+    return Math.max(12, Math.min(300, Math.round(fitScale)));
+  };
 
   const getAvailableChannels = (image: TLoadedImage | null): ChannelConfig[] => {
     if (!image) return [];
@@ -141,7 +141,8 @@ function App() {
     setVisibleChannels(initialVisibility);
     setPickedColor(null);
 
-    setViewScale(100);
+    const initialScale = calculateInitialScale(loadedImage.width, loadedImage.height);
+    setViewScale(initialScale);
   };
 
   const handleResizeApply = (_: any, targetW: number, targetH: number) => {
@@ -271,7 +272,8 @@ function App() {
         onToolSelect={(tool) => {
           if ((tool === 'levels' || tool == 'resize') && !originalImageData) return;
           setActiveTool(tool)
-        }} />
+        }}
+        hasImage={!!image} />
 
       <Box sx={{ display: 'flex', flexGrow: 1 }}>
         <CanvasView

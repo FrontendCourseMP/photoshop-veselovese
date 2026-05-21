@@ -10,11 +10,15 @@ interface StatusBarProps {
 
 const ZOOM_OPTIONS = [12, 25, 33, 50, 67, 75, 100, 125, 150, 200, 250, 300];
 
-export const StatusBar: React.FC<StatusBarProps> = ({ image, viewScale, onScaleChange }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ image, viewScale = 100, onScaleChange }) => {
+    const zoomOptions = ZOOM_OPTIONS.includes(viewScale)
+        ? ZOOM_OPTIONS
+        : [...ZOOM_OPTIONS, viewScale].sort((a, b) => a - b);
+
     return (
         <Box
             sx={{
-                minHeight: '3.2rem',
+                minHeight: '4rem',
                 backgroundColor: '#383838',
                 display: 'flex',
                 alignItems: 'center',
@@ -38,12 +42,12 @@ export const StatusBar: React.FC<StatusBarProps> = ({ image, viewScale, onScaleC
                         Глубина цвета: {image.bitDepth} бит
                     </Typography>
                     {onScaleChange && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="caption">Масштаб:</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', }}>
+                            <Typography variant="caption" sx={{ mr: 2, color: '#ccc', fontSize: '1.4rem' }}>Масштаб:</Typography>
                             <FormControl size="small" sx={{ minWidth: 80 }}>
-                                <Select value={viewScale} onChange={e => onScaleChange(Number(e.target.value))} sx={{ color: '#fff', fontSize: '0.8rem' }}>
-                                    {ZOOM_OPTIONS.map(z => (
-                                        <MenuItem key={z} value={z}>{z}%</MenuItem>
+                                <Select value={viewScale} onChange={e => onScaleChange(Number(e.target.value))} sx={{ color: '#ccc', fontSize: '1.4rem', backgroundColor: '#383838', }}>
+                                    {zoomOptions.map(z => (
+                                        <MenuItem key={z} value={z} sx={{ color: '#ccc', fontSize: '1.4rem', backgroundColor: '#383838', }}>{z}%</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>

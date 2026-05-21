@@ -22,7 +22,6 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
     viewScale,
     onPixelPicked
 }) => {
-    console.log('CanvasView rendered with viewScale:', viewScale);
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -102,7 +101,7 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
                 backgroundColor: '#1e1e1e',
                 overflow: 'hidden',
                 height: '100%',
-                maxHeight: 'calc(100vh - 4.8rem - 3.2rem*2)',
+                maxHeight: 'calc(100vh - 4.8rem - 3.2rem - 4rem)',
             }}
         >
             {originalData && (
@@ -111,11 +110,11 @@ export const CanvasView: React.FC<CanvasViewProps> = ({
                     onClick={handleCanvasClick}
                     style={{
                         boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-                        maxWidth: 'calc(100% - 2.4rem*2)',
-                        maxHeight: 'calc(100% - 2.4rem*2)',
                         width: 'auto',
                         height: 'auto',
                         transform: `scale(${viewScale})`,
+                        imageRendering: 'auto',
+                        transformOrigin: 'center center',
                     }}
                 />
             )}
