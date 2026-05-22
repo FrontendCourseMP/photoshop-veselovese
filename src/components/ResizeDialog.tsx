@@ -101,10 +101,26 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <TextField label="Ширина" value={width} onChange={e => handleWidthChange(e.target.value)} sx={{ flex: 1 }} size="small" />
-                    <TextField label="Высота" value={height} onChange={e => handleHeightChange(e.target.value)} sx={{ flex: 1 }} size="small" />
+                    <TextField label="Ширина" value={width} onChange={e => handleWidthChange(e.target.value)} sx={{
+                        flex: 1, color: '#ccc', '& .MuiInputBase-input': {
+                            color: '#ccc'
+                        },
+                        '& .MuiFormLabel-root': {
+                            color: '#ccc'
+                        }
+                    }} size="small" />
+                    <TextField label="Высота" value={height} onChange={e => handleHeightChange(e.target.value)} sx={{
+                        flex: 1, '& .MuiInputBase-input': {
+                            color: '#ccc'
+                        },
+                        '& .MuiFormLabel-root': {
+                            color: '#ccc'
+                        }
+                    }} size="small" />
                     <FormControl size="small" sx={{ minWidth: 60 }}>
-                        <Select value={unit} onChange={e => handleUnitChange(e.target.value as 'px' | '%')} sx={{ color: '#fff' }}>
+                        <Select value={unit} onChange={e => handleUnitChange(e.target.value as 'px' | '%')} sx={{
+                            color: '#ccc'
+                        }}>
                             <MenuItem value="px">px</MenuItem>
                             <MenuItem value="%">%</MenuItem>
                         </Select>
@@ -116,7 +132,7 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <FormControl fullWidth size="small">
                         <InputLabel sx={{ color: '#ccc' }}>Алгоритм</InputLabel>
-                        <Select value={method} onChange={e => setMethod(e.target.value as InterpolationMethod)} sx={{ color: '#fff' }}>
+                        <Select value={method} onChange={e => setMethod(e.target.value as InterpolationMethod)} sx={{ color: '#ccc' }}>
                             <MenuItem value="nearest">Ближайший сосед</MenuItem>
                             <MenuItem value="bilinear">Билинейная</MenuItem>
                         </Select>
