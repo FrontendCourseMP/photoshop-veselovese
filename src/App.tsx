@@ -315,6 +315,7 @@ function App() {
         onApply={handleResizeApply}
         originalWidth={originalImageData?.width || 0}
         originalHeight={originalImageData?.height || 0}
+        originalImageData={originalImageData}
       />
     </Box>
   );

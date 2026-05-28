@@ -171,8 +171,10 @@ export const updateLevelSetting = (
 
   if (key === 'black') {
     updated.black = Math.min(value, current.white - 1);
+    updated.midtone = Math.round((current.white + current.black) / 2);
   } else if (key === 'white') {
     updated.white = Math.max(value, current.black + 1);
+    updated.midtone = Math.max(Math.round((current.white + current.black) / 2), current.black + 1);
   } else if (key === 'midtone') {
     updated.midtone = value;
   }
