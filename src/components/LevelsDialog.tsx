@@ -143,40 +143,56 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     if (!open) return null;
 
     return (
-        <Dialog open={open} onClose={onClose}  fullWidth sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}>
-            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold' }}>Коррекция "Уровни" (Levels)</DialogTitle>
+        <Dialog open={open} onClose={onClose} fullWidth sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}>
+            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Коррекция "Уровни" </DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#3c3c3c', borderRadius: 1 }}>
-                        <InputLabel sx={{ color: '#ccc' }}>Канал</InputLabel>
                         <Select
                             value={channel}
-                            label="Канал"
                             onChange={(e) => setChannel(e.target.value as ChannelKey)}
-                            sx={{ color: '#fff', '.MuiOutlinedInput-notchedOutline': { borderColor: '#555' } }}
+                            sx={{
+                                color: '#ccc',
+                                '& .MuiInputBase-input': {
+                                    color: '#ccc',
+                                    fontSize: '14px',
+
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#ccc'
+                                },
+                            }}
                         >
                             {availableChannelKeys.includes('master') && (
-                                <MenuItem value="master">Master (RGB)</MenuItem>
+                                <MenuItem value="master" sx={{ fontSize: '1.4rem' }}>Master (RGB)</MenuItem>
                             )}
                             {availableChannelKeys.includes('r') && (
-                                <MenuItem value="r">Красный (R)</MenuItem>
+                                <MenuItem value="r" sx={{ fontSize: '1.4rem' }}>Красный (R)</MenuItem>
                             )}
                             {availableChannelKeys.includes('g') && (
-                                <MenuItem value="g">Зеленый (G)</MenuItem>
+                                <MenuItem value="g" sx={{ fontSize: '1.4rem' }}>Зеленый (G)</MenuItem>
                             )}
                             {availableChannelKeys.includes('b') && (
-                                <MenuItem value="b">Синий (B)</MenuItem>
+                                <MenuItem value="b" sx={{ fontSize: '1.4rem' }}>Синий (B)</MenuItem>
                             )}
                             {availableChannelKeys.includes('gray') && (
-                                <MenuItem value="gray">Grayscale (G)</MenuItem>
+                                <MenuItem value="gray" sx={{ fontSize: '1.4rem' }}>Grayscale (G)</MenuItem>
                             )}
                             {availableChannelKeys.includes('a') && (
-                                <MenuItem value="a">Альфа (A)</MenuItem>
+                                <MenuItem value="a" sx={{ fontSize: '1.4rem' }}>Альфа (A)</MenuItem>
                             )}
                         </Select>
                     </FormControl>
-                    <FormControlLabel control={<Switch checked={logScale} onChange={(e) => setLogScale(e.target.checked)} />} label="Логарифмическая шкала" />
-                    <FormControlLabel control={<Checkbox checked={previewEnabled} onChange={(e) => { setPreviewEnabled(e.target.checked); if (!e.target.checked) onPreviewChange(null); else applyPreview(); }} />} label="Предпросмотр" />
+                    <FormControlLabel sx={{
+                        '& .MuiTypography-root': {
+                            fontSize: '12px'
+                        }
+                    }} control={<Switch checked={logScale} onChange={(e) => setLogScale(e.target.checked)} />} label="Логарифмическая шкала" />
+                    <FormControlLabel sx={{
+                        '& .MuiTypography-root': {
+                            fontSize: '12px'
+                        }
+                    }} control={<Checkbox checked={previewEnabled} onChange={(e) => { setPreviewEnabled(e.target.checked); if (!e.target.checked) onPreviewChange(null); else applyPreview(); }} />} label="Предпросмотр" />
                 </Box>
 
                 <Box sx={{ width: '100%', height: 150, bgcolor: '#1a1a1a', borderRadius: 2, overflow: 'hidden', mb: 2, position: 'relative' }}>
@@ -184,7 +200,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                 </Box>
 
                 <Box sx={{ px: 1, mt: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa' }}>Точка черного</Typography>
+                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>Точка черного</Typography>
                     <Slider
                         value={settings[channel].black}
                         min={0}
@@ -193,8 +209,8 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                         sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 12, height: 12 } }}
                     />
 
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Полутона (Gamma)</span>
+                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>
+                        Полутона (Gamma)
                     </Typography>
                     <Slider
                         value={settings[channel].midtone}
@@ -204,7 +220,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                         sx={{ color: '#fff', '& .MuiSlider-thumb': { width: 14, height: 14 } }}
                     />
 
-                    <Typography variant="body2" sx={{ mb: 0.5, color: '#aaa' }}>Точка белого</Typography>
+                    <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px' }}>Точка белого</Typography>
                     <Slider
                         value={settings[channel].white}
                         min={0}
@@ -215,9 +231,9 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
                 </Box>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={handleReset} sx={{ color: '#aaa' }}>Сброс</Button>
-                <Button onClick={onClose} sx={{ color: '#f44336' }}>Отмена</Button>
-                <Button onClick={handleApply} variant="contained" sx={{ bgcolor: '#2196f3' }}>Применить</Button>
+                <Button onClick={handleReset} sx={{ color: '#aaa', fontSize: '14px', textTransform: 'none', p: '6px 16px', mr: 'auto' }}>Сброс</Button>
+                <Button onClick={onClose} sx={{ color: '#f44336', fontSize: '14px', textTransform: 'none', p: '6px 16px' }}>Отмена</Button>
+                <Button onClick={handleApply} variant="contained" sx={{ bgcolor: '#2196f3', fontSize: '14px', textTransform: 'none', p: '6px 16px', boxShadow: 'none' }}>Применить</Button>
             </DialogActions>
         </Dialog>
     );

@@ -82,7 +82,7 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
         const h = unit === 'px' ? parseFloat(height) : (parseFloat(height) / 100) * originalHeight;
 
         if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return { w: 0, h: 0, err: 'Размеры должны быть больше 0' };
-        
+
         const finalW = Math.round(w);
         const finalH = Math.round(h);
 
@@ -131,23 +131,22 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}>
-            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold' }}>Масштабирование изображения</DialogTitle>
+            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Масштабирование изображения</DialogTitle>
             <DialogContent>
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Исходно: <strong>{originalMP} Мп</strong> ({originalWidth}×{originalHeight})</Typography>
-                    <Typography variant="body2" color={targetErr ? '#f44336' : (targetW > 0 ? '#4caf50' : 'text.secondary')}>
-                        Итог: <strong>{targetMP} Мп</strong>
+                <Box sx={{ mb: '1.6rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" sx={{ fontSize: '12px' }}>Исходно: {originalMP} Мп ({originalWidth}×{originalHeight})</Typography>
+                    <Typography variant="body2" sx={{ fontSize: '12px' }} color={!!targetErr ? '#f44336' : (targetW > 0 ? '#4caf50' : 'text.secondary')}>
+                        Итог: {targetMP} Мп
                     </Typography>
                 </Box>
 
                 {targetErr && (
-                    <Alert severity="error" icon={<ErrorOutlined fontSize="small" />} sx={{ mb: 2 }}>
+                    <Alert severity="error" icon={<ErrorOutlined fontSize="large" />} sx={{ mb: '1.6rem', fontSize: '12px', display: 'flex', alignItems: 'center' }}>
                         {targetErr}
                     </Alert>
                 )}
 
-                {/* Выбор единиц */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: '0.8rem' }}>
                     <TextField
                         label="Ширина"
                         type="number"
@@ -157,11 +156,17 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                         helperText={isValidInput(width) ? '' : 'Некорректное значение'}
                         fullWidth
                         sx={{
-                            flex: 1, color: '#ccc', '& .MuiInputBase-input': {
-                                color: '#ccc'
+                            flex: 1, color: '#ccc', fontSize: '12px',
+                            '& .MuiInputBase-input': {
+                                color: '#ccc',
+                                fontSize: '14px',
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#ccc'
                             },
                             '& .MuiFormLabel-root': {
-                                color: '#ccc'
+                                color: '#ccc',
+                                fontSize: '12px'
                             }
                         }} size="small" />
                     <TextField
@@ -174,19 +179,34 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
 
                         fullWidth
                         sx={{
-                            flex: 1, '& .MuiInputBase-input': {
-                                color: '#ccc'
+                            flex: 1,
+                            '& .MuiInputBase-input': {
+                                color: '#ccc',
+                                fontSize: '14px',
+
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#ccc'
                             },
                             '& .MuiFormLabel-root': {
-                                color: '#ccc'
+                                color: '#ccc',
+                                fontSize: '12px'
                             }
                         }} size="small" />
                     <FormControl size="small" sx={{ minWidth: 60 }}>
                         <Select value={unit} onChange={e => handleUnitChange(e.target.value as 'px' | '%')} sx={{
-                            color: '#ccc'
+                            color: '#ccc',
+                            '& .MuiInputBase-input': {
+                                color: '#ccc',
+                                fontSize: '14px',
+
+                            },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: '#ccc'
+                            },
                         }}>
-                            <MenuItem value="px">px</MenuItem>
-                            <MenuItem value="%">%</MenuItem>
+                            <MenuItem value="px" sx={{ fontSize: '1.4rem' }}>px</MenuItem>
+                            <MenuItem value="%" sx={{ fontSize: '1.4rem' }}>%</MenuItem>
                         </Select>
                     </FormControl>
                 </Box>
@@ -194,19 +214,31 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                 <FormControlLabel
                     control={<Checkbox checked={lockAspect} onChange={(e) => setLockAspect(e.target.checked)} />}
                     label="Сохранять пропорции"
-                    sx={{ mb: 2 }}
+                    sx={{ mb: '1.6rem', fontSize: '12px' }}
                 />
 
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <FormControl fullWidth>
-                        <InputLabel>Алгоритм</InputLabel>
+                        <InputLabel sx={{ fontSize: '12px', color: '#ccc' }}>Алгоритм</InputLabel>
                         <Select
+                            label="Алгоритм"
                             value={method}
                             onChange={(e) => setMethod(e.target.value as InterpolationMethod)}
                             error={false}
+                            sx={{
+                                color: '#ccc',
+                                '& .MuiInputBase-input': {
+                                    color: '#ccc',
+                                    fontSize: '14px',
+
+                                },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#ccc'
+                                },
+                            }}
                         >
-                            <MenuItem value="nearest">Ближайший сосед (Nearest Neighbor)</MenuItem>
-                            <MenuItem value="bilinear">Билинейная (Bilinear)</MenuItem>
+                            <MenuItem value="nearest" sx={{ fontSize: '1.4rem' }}>Ближайший сосед (Nearest Neighbor)</MenuItem>
+                            <MenuItem value="bilinear" sx={{ fontSize: '1.4rem' }}>Билинейная (Bilinear)</MenuItem>
                         </Select>
                     </FormControl>
                     <Tooltip
@@ -215,22 +247,24 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                                 ? "Билинейная: Усредняет 4 соседних пикселя. Плавный результат. Используется по умолчанию."
                                 : "Ближайший сосед: Берет цвет ближайшего пикселя. Четкие границы, лестничный эффект."
                         }
+                        sx={{ fontSize: '12px' }}
                     >
-                        <IconButton size="small" sx={{ ml: 1, color: 'action' }}><InfoOutlined /></IconButton>
+                        <IconButton size="small" sx={{ ml: 1, color: '#ccc', fontSize: '12px' }}><InfoOutlined /></IconButton>
                     </Tooltip>
                 </Box>
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={onClose}>Отмена</Button>
+                <Button onClick={onClose} sx={{ color: '#f44336', fontSize: '14px', textTransform: 'none', p: '6px 16px' }}>Отмена</Button>
                 <Button
                     onClick={handleApply}
                     variant="contained"
                     disabled={isApplyDisabled}
+                    sx={{ fontSize: '14px', textTransform: 'none', boxShadow: 'none' }}
                 >
                     Применить
                 </Button>
             </DialogActions>
-        </Dialog>
+        </Dialog >
 
     );
 };
