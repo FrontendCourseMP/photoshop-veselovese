@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
     Button, FormControl, InputLabel, Select, MenuItem,
@@ -14,6 +14,7 @@ import {
     FILTER_PRESETS,
     EdgeHandling
 } from '../utils/filters';
+import { FilterChannelKey } from '../types/channel';
 
 interface FilterDialogProps {
     open: boolean;
@@ -21,113 +22,109 @@ interface FilterDialogProps {
     onApply: (newImageData: ImageData) => void;
     onPreviewChange: (data: ImageData | null) => void;
     originalData: ImageData | null;
+    availableChannelKeys: FilterChannelKey[];
 }
 
 export const FilterDialog: React.FC<FilterDialogProps> = ({
-    open, onClose, onApply, onPreviewChange, originalData
+    open, onClose, onApply, onPreviewChange, originalData, availableChannelKeys
 }) => {
     const [preset, setPreset] = useState<FilterPreset>('identity');
-    const [settings, setSettings] = useState<FilterSettings>(createDefaultSettings());
     const [previewEnabled, setPreviewEnabled] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    const settingsRef = useRef<FilterSettings>(createDefaultSettings(availableChannelKeys));
+    const [settingsVersion, setSettingsVersion] = useState(0);
+
+    const settings = useMemo(() => settingsRef.current, [settingsVersion]);
+
     const rafRef = useRef<number | null>(null);
+    const previewTriggerRef = useRef(false);
 
     useEffect(() => {
         if (open) {
             setPreset('identity');
-            setSettings(createDefaultSettings());
+            settingsRef.current = createDefaultSettings(availableChannelKeys);
             setPreviewEnabled(true);
+            setSettingsVersion(v => v + 1);
+            previewTriggerRef.current = true;
         } else {
             onPreviewChange(null);
         }
     }, [open]);
 
+    const updateSettings = useCallback((updater: (prev: FilterSettings) => FilterSettings, triggerPreview = true) => {
+        settingsRef.current = updater(settingsRef.current);
+        setSettingsVersion(v => v + 1);
+        if (triggerPreview) {
+            previewTriggerRef.current = true;
+        }
+    }, []);
+
     const handlePresetChange = (value: FilterPreset) => {
         setPreset(value);
         const presetData = FILTER_PRESETS[value];
-        setSettings(prev => ({
-            ...prev,
-            kernel: [...presetData.kernel]
-        }));
+        updateSettings(prev => ({ ...prev, kernel: [...presetData.kernel] }));
     };
 
     const handleKernelChange = (index: number, value: string) => {
         const numValue = parseFloat(value) || 0;
-        setSettings(prev => ({
+        updateSettings(prev => ({
             ...prev,
             kernel: prev.kernel.map((v, i) => i === index ? numValue : v)
         }));
     };
 
-    const handleChannelChange = (channel: keyof FilterSettings['channels']) => {
-        setSettings(prev => ({
+    const handleChannelChange = (channel: FilterChannelKey) => {
+        updateSettings(prev => ({
             ...prev,
-            channels: {
-                ...prev.channels,
-                [channel]: !prev.channels[channel]
-            }
+            channels: { ...prev.channels, [channel]: !prev.channels[channel] }
         }));
     };
 
     const handleEdgeHandlingChange = (value: EdgeHandling) => {
-        setSettings(prev => ({ ...prev, edgeHandling: value }));
-    };
+        updateSettings(prev => ({ ...prev, edgeHandling: value }));
+    }
 
     const applyPreview = useCallback(async () => {
-        if (!originalData || !previewEnabled) {
-            onPreviewChange(null);
+        if (!originalData || !previewEnabled || !previewTriggerRef.current) {
             return;
         }
+        previewTriggerRef.current = false; // Сбрасываем флаг
 
         setIsProcessing(true);
         try {
-            if (originalData.width * originalData.height > 100000) {
-                const result = await applyKernelFilterAsync(
-                    originalData,
-                    settings,
-                    () => { }
-                );
-                onPreviewChange(result);
-            } else {
-                const result = applyKernelFilter(originalData, settings);
-                onPreviewChange(result);
-            }
-        } catch (error) {
-            console.error('Filter error:', error);
-        } finally {
-            setIsProcessing(false);
-        }
-    }, [originalData, previewEnabled, settings]);
+            const isLarge = originalData.width * originalData.height > 100000;
+            const result = isLarge
+                ? await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys)
+                : applyKernelFilter(originalData, settingsRef.current, availableChannelKeys);
+            onPreviewChange(result);
+        } catch (e) { console.error(e); }
+        finally { setIsProcessing(false); }
+    }, [originalData, previewEnabled, availableChannelKeys]);
 
     useEffect(() => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-            if (!isProcessing) {
-                applyPreview();
-            }
-        });
-
-        return () => {
+        if (previewTriggerRef.current && !isProcessing) {
             if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        };
-    }, [settings, applyPreview, isProcessing]);
+            rafRef.current = requestAnimationFrame(() => applyPreview());
+        }
+        return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    }, [settingsVersion, previewEnabled, isProcessing]);
 
     const handleReset = () => {
         setPreset('identity');
-        setSettings(createDefaultSettings());
+        settingsRef.current = createDefaultSettings(availableChannelKeys);
+        setSettingsVersion(v => v + 1);
+        previewTriggerRef.current = true;
     };
 
     const handleApply = async () => {
         if (!originalData) return;
-
         setIsProcessing(true);
         try {
-            const result = await applyKernelFilterAsync(originalData, settings);
-            console.log(result)
+            const result = await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys);
             onApply(result);
-        } catch (error) {
-            console.error('Apply filter error:', error);
-        } finally {
+        } catch (e) { console.error(e); }
+        finally {
             setIsProcessing(false);
             onClose();
         }
@@ -145,7 +142,6 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                 Фильтрация изображений (Kernel Filter)
             </DialogTitle>
             <DialogContent>
-                {/* Preset selection */}
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
                         Предустановленные фильтры:
@@ -201,56 +197,74 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                     </Box>
                 </Box>
 
-                {/* Channel selection */}
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
                         Каналы для обработки:
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 2 }}>
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={settings.channels.r}
-                                    onChange={() => handleChannelChange('r')}
-                                    sx={{ color: '#ccc' }}
-                                />
-                            }
-                            label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Красный (R)</Typography>}
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={settings.channels.g}
-                                    onChange={() => handleChannelChange('g')}
-                                    sx={{ color: '#ccc' }}
-                                />
-                            }
-                            label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Зеленый (G)</Typography>}
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={settings.channels.b}
-                                    onChange={() => handleChannelChange('b')}
-                                    sx={{ color: '#ccc' }}
-                                />
-                            }
-                            label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Синий (B)</Typography>}
-                        />
-                        <FormControlLabel
-                            control={
-                                <Checkbox
-                                    checked={settings.channels.a}
-                                    onChange={() => handleChannelChange('a')}
-                                    sx={{ color: '#ccc' }}
-                                />
-                            }
-                            label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Альфа (A)</Typography>}
-                        />
+                        {availableChannelKeys.includes('r') && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={settings.channels.r}
+                                        onChange={() => handleChannelChange('r')}
+                                        sx={{ color: '#ccc' }}
+                                    />
+                                }
+                                label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Красный (R)</Typography>}
+                            />
+                        )}
+                        {availableChannelKeys.includes('g') && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={settings.channels.g}
+                                        onChange={() => handleChannelChange('g')}
+                                        sx={{ color: '#ccc' }}
+                                    />
+                                }
+                                label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Зеленый (G)</Typography>}
+                            />
+                        )}
+                        {availableChannelKeys.includes('b') && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={settings.channels.b}
+                                        onChange={() => handleChannelChange('b')}
+                                        sx={{ color: '#ccc' }}
+                                    />
+                                }
+                                label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Синий (B)</Typography>}
+                            />
+                        )}
+                        {availableChannelKeys.includes('gray') && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={settings.channels.gray}
+                                        onChange={() => handleChannelChange('gray')}
+                                        sx={{ color: '#ccc' }}
+                                    />
+                                }
+                                label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Grayscale (G)</Typography>}
+                            />
+                        )}
+                        {availableChannelKeys.includes('a') && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={settings.channels.a}
+                                        onChange={() => handleChannelChange('a')}
+                                        sx={{ color: '#ccc' }}
+                                    />
+                                }
+                                label={<Typography sx={{ color: '#ccc', fontSize: '12px' }}>Альфа (A)</Typography>}
+                            />
+                        )}
                     </Box>
                 </Box>
 
-                {/* Edge handling */}
                 <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
                         Обработка краев (Padding):
@@ -278,7 +292,6 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                     </RadioGroup>
                 </Box>
 
-                {/* Preview checkbox */}
                 <FormControlLabel
                     control={
                         <Checkbox
@@ -292,7 +305,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                             Предпросмотр {isProcessing && '(обработка...)'}
                         </Typography>
                     }
-                // disabled={isProcessing}
+                disabled={isProcessing}
                 />
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>

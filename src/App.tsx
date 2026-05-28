@@ -9,7 +9,7 @@ import { CanvasView } from './components/CanvasView';
 import { RightToolbar } from './components/RightToolbar';
 import { MainToolbar } from './components/MainToolbar';
 import { TLoadedImage, IPNGImage, IJPEGImage } from './types/image';
-import { ChannelConfig, ChannelKey } from './types/channel';
+import { ChannelConfig, ChannelKey, toFilterChannelKeys } from './types/channel';
 
 import { GB7Service } from './utils/gb7';
 import { rgbToLab } from './utils/color';
@@ -341,6 +341,7 @@ function App() {
         onApply={handleFilterApply}
         onPreviewChange={setPreviewImageData}
         originalData={originalImageData}
+        availableChannelKeys={toFilterChannelKeys(getAvailableChannelKeys(image))}
       />
     </Box>
   );
