@@ -1,6 +1,6 @@
 import { Box, Tooltip, IconButton } from "@mui/material";
 import {
-    Colorize as EyedropperIcon, PanTool as CursorIcon, Tune as TuneIcon, PhotoSizeSelectLarge as ResizeIcon
+    Colorize as EyedropperIcon, PanTool as CursorIcon, Tune as TuneIcon, PhotoSizeSelectLarge as ResizeIcon, FilterList as FilterIcon
 } from '@mui/icons-material';
 import { Tool } from "../types/tool";
 
@@ -81,6 +81,23 @@ export const ToolBar: React.FC<ToolBarProps> = ({ activeTool, onToolSelect, hasI
                     }}
                     disabled={!hasImage}>
                     <ResizeIcon
+                        style={{ color: '#ccc' }} />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title="Фильтры" sx={{ fontSize: '1.4rem' }}>
+                <IconButton onClick={() => onToolSelect('filter')}
+                    sx={{
+                        p: 0,
+                        alignItems: 'start',
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '2.4rem',
+                        },
+                        '&.Mui-disabled & .MuiSvgIcon-root': {
+                            color: '#738388',
+                        }
+                    }}
+                    disabled={!hasImage}>
+                    <FilterIcon
                         style={{ color: '#ccc' }} />
                 </IconButton>
             </Tooltip>

@@ -18,6 +18,7 @@ import { Tool } from './types/tool';
 import { LevelsDialog } from './components/LevelsDialog';
 import { InterpolationMethod, resizeImage } from './utils/interpolation';
 import { ResizeDialog } from './components/ResizeDialog';
+import { FilterDialog } from './components/FilterDialog';
 
 function App() {
   const [image, setImage] = useState<TLoadedImage | null>(null);
@@ -257,6 +258,22 @@ function App() {
     }
   };
 
+  const handleFilterApply = (newImageData: ImageData) => {
+    if (!image) return;
+    console.log(originalImageData, newImageData)
+    const isUnchanged = !newImageData || newImageData.data.every((v, i) => v === originalImageData?.data[i]);
+    if (isUnchanged) {
+      setActiveTool('cursor');
+      setPreviewImageData(null);
+      return;
+    }
+
+    setOriginalImageData(newImageData);
+    setImage({ ...image, pixelData: newImageData });
+    setPreviewImageData(null);
+    setActiveTool('cursor');
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <MainToolbar fileInputRef={fileInputRef}
@@ -316,6 +333,14 @@ function App() {
         originalWidth={originalImageData?.width || 0}
         originalHeight={originalImageData?.height || 0}
         originalImageData={originalImageData}
+      />
+
+      <FilterDialog
+        open={activeTool === 'filter' && !!originalImageData}
+        onClose={() => setActiveTool('cursor')}
+        onApply={handleFilterApply}
+        onPreviewChange={setPreviewImageData}
+        originalData={originalImageData}
       />
     </Box>
   );
