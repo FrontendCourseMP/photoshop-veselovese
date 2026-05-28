@@ -105,7 +105,7 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
             const maxVal = Math.max(...histogramData);
             if (maxVal === 0) return;
 
-            const scaleX = canvas.width / 255;
+            const scaleX = canvas.width / maxValue;
             const divisor = logScale ? Math.log1p(maxVal) : maxVal;
 
             ctx.fillStyle = '#aaa';

@@ -170,11 +170,11 @@ export const updateLevelSetting = (
   let updated = { ...current };
 
   if (key === 'black') {
-    updated.black = Math.min(value, current.midtone - 1);
+    updated.black = Math.min(value, current.white - 1);
   } else if (key === 'white') {
-    updated.white = Math.max(value, current.midtone + 1);
+    updated.white = Math.max(value, current.black + 1);
   } else if (key === 'midtone') {
-    updated.midtone = Math.max(current.black + 1, Math.min(value, current.white - 1));
+    updated.midtone = value;
   }
 
   return { ...settings, [channel]: updated };
