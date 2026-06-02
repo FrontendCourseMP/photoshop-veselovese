@@ -3,19 +3,15 @@ import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, Box,
     TextField, FormControlLabel, Checkbox, Select, MenuItem, InputLabel,
     FormControl, Typography, Tooltip, IconButton, Alert,
-    Stack,
-    ToggleButtonGroup,
-    ToggleButton,
-    InputAdornment
 } from '@mui/material';
-import { resizeImage, InterpolationMethod, INTERPOLATION_CONFIG } from '../utils/interpolation';
+import { resizeImage, InterpolationMethod } from '../utils/interpolation';
 import { InfoOutlined, ErrorOutlined } from '@mui/icons-material';
 
 
 interface ResizeDialogProps {
     open: boolean;
     onClose: () => void;
-    onApply: (newImageData: ImageData, newWidth: number, newHeight: number) => void;
+    onApply: (newImageData: ImageData, newWidth: number, newHeight: number, interpolationMethod: InterpolationMethod) => void;
     originalWidth: number;
     originalHeight: number;
     originalImageData: ImageData | null;
@@ -37,8 +33,6 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
     };
 
     const aspect = originalWidth / originalHeight;
-
-    const toMegapixels = (w: number, h: number) => ((w * h) / 1_000_000).toFixed(2);
 
     const handleWidthChange = (val: string) => {
         if (!isValidInput(val)) return;
@@ -101,7 +95,7 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
         } catch (e) {
             return { w: 0, h: 0, err: 'Ошибка при вычислении' };
         }
-    }, [width, height, unit, originalWidth, originalHeight, originalImageData]);
+    }, [width, height, unit, method, originalWidth, originalHeight, originalImageData]);
 
     const { w: targetW, h: targetH, err: targetErr, newImg } = getTargetData();
     const targetMP = targetW > 0 ? (targetW * targetH / 1_000_000).toFixed(2) : '0.00';
@@ -110,12 +104,13 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
     const handleApply = () => {
         if (targetErr) {
             setError(targetErr);
+            console.log(error)
             return;
         }
         if (!newImg) return;
 
         setError(null);
-        onApply(newImg, targetW, targetH);
+        onApply(newImg, targetW, targetH, method);
     };
 
     useEffect(() => {
@@ -237,15 +232,15 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
                                 },
                             }}
                         >
-                            <MenuItem value="nearest" sx={{ fontSize: '1.4rem' }}>Ближайший сосед (Nearest Neighbor)</MenuItem>
-                            <MenuItem value="bilinear" sx={{ fontSize: '1.4rem' }}>Билинейная (Bilinear)</MenuItem>
+                            <MenuItem value="nearest" sx={{ fontSize: '1.4rem' }}>Ближайший сосед</MenuItem>
+                            <MenuItem value="bilinear" sx={{ fontSize: '1.4rem' }}>Билинейная</MenuItem>
                         </Select>
                     </FormControl>
                     <Tooltip
                         title={
                             method === 'bilinear'
-                                ? "Билинейная: Усредняет 4 соседних пикселя. Плавный результат. Используется по умолчанию."
-                                : "Ближайший сосед: Берет цвет ближайшего пикселя. Четкие границы, лестничный эффект."
+                                ? "Билинейный: усредняет 4 соседних пикселя. Плавные переходы."
+                                : "Ближайший сосед: берет цвет ближайшего пикселя. Четкие границы, лестничный эффект."
                         }
                         sx={{ fontSize: '12px' }}
                     >

@@ -33,7 +33,6 @@ function App() {
   const [pickedColor, setPickedColor] = useState<{ x: number; y: number; r: number; g: number; b: number; L: number; A: number; B: number } | null>(null);
 
   const [viewScale, setViewScale] = useState<number>(100);
-  const [interpolationMethod, setInterpolationMethod] = useState<InterpolationMethod>('bilinear');
 
   const calculateInitialScale = (imgW: number, imgH: number) => {
     const availW = window.innerWidth - 350;
@@ -146,7 +145,7 @@ function App() {
     setViewScale(initialScale);
   };
 
-  const handleResizeApply = (_: any, targetW: number, targetH: number) => {
+  const handleResizeApply = (_: any, targetW: number, targetH: number, interpolationMethod: InterpolationMethod) => {
     if (!image) return;
     if (!originalImageData) return;
 
@@ -287,7 +286,7 @@ function App() {
       <ToolBar
         activeTool={activeTool}
         onToolSelect={(tool) => {
-          if ((tool === 'levels' || tool == 'resize') && !originalImageData) return;
+          if ((tool === 'levels' || tool === 'resize') && !originalImageData) return;
           setActiveTool(tool)
         }}
         hasImage={!!image} />
