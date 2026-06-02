@@ -16,7 +16,7 @@ export const FILTER_PRESETS: Record<FilterPreset, KernelFilter> = {
     box: { name: 'Прямоугольное размытие', kernel: [1, 1, 1, 1, 1, 1, 1, 1, 1], divisor: 9 },
     prewittH: { name: 'Оператор Прюитта (горизонтальный)', kernel: [-1, -1, -1, 0, 0, 0, 1, 1, 1] },
     prewittV: { name: 'Оператор Прюитта (вертикальный)', kernel: [-1, 0, 1, -1, 0, 1, -1, 0, 1] },
-    custom: { name: 'Пользовательские настройки', kernel: [0, 0, 0, 0, 1, 0, 0, 0, 0] } 
+    custom: { name: 'Пользовательские настройки', kernel: [0, 0, 0, 0, 1, 0, 0, 0, 0] }
 };
 
 export interface FilterSettings {
@@ -95,7 +95,7 @@ function padImage(data: Uint8ClampedArray, width: number, height: number, edgeHa
 
     console.log('Edge handling:', edgeHandling);
     console.log('Corner pixel (0,0):', padded[0], padded[1], padded[2]);
-    console.log('Center pixel:', padded[(ph/2 * pw + pw/2) * 4]);
+    console.log('Center pixel:', padded[(ph / 2 * pw + pw / 2) * 4]);
     return { data: padded, width: pw, height: ph };
 }
 
@@ -241,4 +241,38 @@ export async function applyKernelFilterAsync(
     }
 
     return result;
+}
+
+export function applyKernelFilterWorker(
+    srcImageData: ImageData,
+    settings: FilterSettings,
+    availableKeys: FilterChannelKey[]
+): Promise<ImageData> {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(new URL('../workers/filterWorker.ts', import.meta.url), { type: 'module' });
+  
+        worker.onmessage = (e: MessageEvent) => {
+            const { data: buffer, width, height } = e.data;
+            // Восстанавливаем ImageData из переданного буфера
+            const resultImageData = new ImageData(new Uint8ClampedArray(buffer), width, height);
+            worker.terminate(); // Освобождаем ресурсы воркера
+            resolve(resultImageData);
+        };
+        
+        worker.onerror = (error) => {
+            console.error('Worker error:', error);
+            worker.terminate();
+            reject(error);
+        };
+
+        const bufferCopy = srcImageData.data.buffer.slice(0);
+
+        worker.postMessage({
+            buffer: srcImageData.data.buffer,
+            width: srcImageData.width,
+            height: srcImageData.height,
+            settings,
+            availableKeys
+        }, [bufferCopy]);
+    });
 }

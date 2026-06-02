@@ -12,7 +12,8 @@ import {
     applyKernelFilter,
     applyKernelFilterAsync,
     FILTER_PRESETS,
-    EdgeHandling
+    EdgeHandling,
+    applyKernelFilterWorker
 } from '../utils/filters';
 import { FilterChannelKey } from '../types/channel';
 
@@ -98,14 +99,27 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
         previewTriggerRef.current = false;
 
         setIsProcessing(true);
+
+        // Асинхронная функция
+        // try {
+        //     const isLarge = originalData.width * originalData.height > 100000;
+        //     const result = isLarge
+        //         ? await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys)
+        //         : applyKernelFilter(originalData, settingsRef.current, availableChannelKeys);
+        //     onPreviewChange(result);
+        // } catch (e) { console.error(e); }
+        // finally { setIsProcessing(false); }
+
+        // Worker
         try {
-            const isLarge = originalData.width * originalData.height > 100000;
-            const result = isLarge
-                ? await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys)
-                : applyKernelFilter(originalData, settingsRef.current, availableChannelKeys);
+            const result = await applyKernelFilterWorker(originalData, settingsRef.current, availableChannelKeys);
             onPreviewChange(result);
-        } catch (e) { console.error(e); }
-        finally { setIsProcessing(false); }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
+
     }, [originalData, previewEnabled, availableChannelKeys]);
 
     useEffect(() => {
@@ -127,11 +141,24 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
     const handleApply = async () => {
         if (!originalData) return;
         setIsProcessing(true);
+
+        // Асинхронная функция
+        // try {
+        //     const result = await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys);
+        //     onApply(result);
+        // } catch (e) { console.error(e); }
+        // finally {
+        //     setIsProcessing(false);
+        //     onClose();
+        // }
+        
+        // Worker
         try {
-            const result = await applyKernelFilterAsync(originalData, settingsRef.current, availableChannelKeys);
+            const result = await applyKernelFilterWorker(originalData, settingsRef.current, availableChannelKeys);
             onApply(result);
-        } catch (e) { console.error(e); }
-        finally {
+        } catch (e) {
+            console.error(e);
+        } finally {
             setIsProcessing(false);
             onClose();
         }
