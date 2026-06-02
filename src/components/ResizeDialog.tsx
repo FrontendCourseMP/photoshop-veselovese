@@ -125,7 +125,16 @@ export const ResizeDialog: React.FC<ResizeDialogProps> = ({
     const isApplyDisabled = !!targetErr;
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}>
+        <Dialog open={open} onClose={onClose} fullWidth sx={{
+            '& .MuiBackdrop-root': {
+                backgroundColor: 'rgba(0, 0, 0, 0)',
+            },
+            '& .MuiDialog-paper': {
+                bgcolor: '#2d2d2d',
+                color: '#eee',
+                maxWidth: '620px'
+            }
+        }}>
             <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Масштабирование изображения</DialogTitle>
             <DialogContent>
                 <Box sx={{ mb: '1.6rem', display: 'flex', justifyContent: 'space-between' }}>

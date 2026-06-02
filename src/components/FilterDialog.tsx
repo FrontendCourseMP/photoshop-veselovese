@@ -31,6 +31,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
     const [preset, setPreset] = useState<FilterPreset>('identity');
     const [previewEnabled, setPreviewEnabled] = useState(true);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isCustom, setIsCustom] = useState(false);
 
     const settingsRef = useRef<FilterSettings>(createDefaultSettings(availableChannelKeys));
     const [settingsVersion, setSettingsVersion] = useState(0);
@@ -43,6 +44,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
     useEffect(() => {
         if (open) {
             setPreset('identity');
+            setIsCustom(false);
             settingsRef.current = createDefaultSettings(availableChannelKeys);
             setPreviewEnabled(true);
             setSettingsVersion(v => v + 1);
@@ -62,6 +64,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
 
     const handlePresetChange = (value: FilterPreset) => {
         setPreset(value);
+        setIsCustom(false);
         const presetData = FILTER_PRESETS[value];
         updateSettings(prev => ({ ...prev, kernel: [...presetData.kernel] }));
     };
@@ -72,6 +75,9 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
             ...prev,
             kernel: prev.kernel.map((v, i) => i === index ? numValue : v)
         }));
+
+        setPreset('custom');
+        setIsCustom(true);
     };
 
     const handleChannelChange = (channel: FilterChannelKey) => {
@@ -89,7 +95,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
         if (!originalData || !previewEnabled || !previewTriggerRef.current) {
             return;
         }
-        previewTriggerRef.current = false; // Сбрасываем флаг
+        previewTriggerRef.current = false;
 
         setIsProcessing(true);
         try {
@@ -112,6 +118,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
 
     const handleReset = () => {
         setPreset('identity');
+        setIsCustom(false);
         settingsRef.current = createDefaultSettings(availableChannelKeys);
         setSettingsVersion(v => v + 1);
         previewTriggerRef.current = true;
@@ -134,17 +141,28 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
         <Dialog
             open={open}
             onClose={onClose}
-            maxWidth="md"
+            maxWidth="sm"
             fullWidth
-            sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}
+            sx={{
+                '& .MuiBackdrop-root': {
+                    backgroundColor: 'rgba(0, 0, 0, 0)',
+                },
+                '& .MuiDialog-paper': {
+                    bgcolor: '#2d2d2d',
+                    color: '#eee',
+                    ml: 'auto',
+                    mr: '2rem',
+                    maxWidth: '620px'
+                }
+            }}
         >
             <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>
-                Фильтрация изображений (Kernel Filter)
+                Фильтрация изображений
             </DialogTitle>
             <DialogContent>
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
-                        Предустановленные фильтры:
+                        Фильтры:
                     </Typography>
                     <FormControl fullWidth size="small">
                         <Select
@@ -156,19 +174,24 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                                 '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555' }
                             }}
                         >
-                            {Object.entries(FILTER_PRESETS).map(([key, filter]) => (
-                                <MenuItem key={key} value={key} sx={{ fontSize: '14px' }}>
-                                    {filter.name}
-                                </MenuItem>
-                            ))}
+                            {Object.entries(FILTER_PRESETS).map(([key, filter]) => {
+                                if (key === 'custom' && !isCustom) {
+                                    return null;
+                                }
+
+                                return (
+                                    <MenuItem key={key} value={key} sx={{ fontSize: '14px' }}>
+                                        {filter.name}
+                                    </MenuItem>
+                                );
+                            })}
                         </Select>
                     </FormControl>
                 </Box>
 
-                {/* Kernel grid 3x3 */}
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
-                        Ядро свертки (3×3):
+                        Ядро свертки 3×3:
                     </Typography>
                     <Box sx={{
                         display: 'grid',
@@ -267,7 +290,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
 
                 <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" sx={{ color: '#ccc', fontSize: '12px', mb: 1 }}>
-                        Обработка краев (Padding):
+                        Обработка краев:
                     </Typography>
                     <RadioGroup
                         row
@@ -305,7 +328,7 @@ export const FilterDialog: React.FC<FilterDialogProps> = ({
                             Предпросмотр {isProcessing && '(обработка...)'}
                         </Typography>
                     }
-                disabled={isProcessing}
+                    disabled={isProcessing}
                 />
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2 }}>

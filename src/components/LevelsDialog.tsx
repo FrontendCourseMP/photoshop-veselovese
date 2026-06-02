@@ -143,8 +143,19 @@ export const LevelsDialog: React.FC<LevelsDialogProps> = ({
     if (!open) return null;
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth sx={{ '& .MuiDialog-paper': { bgcolor: '#2d2d2d', color: '#eee' } }}>
-            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Коррекция "Уровни" </DialogTitle>
+        <Dialog open={open} onClose={onClose} fullWidth sx={{
+            '& .MuiBackdrop-root': {
+                backgroundColor: 'rgba(0, 0, 0, 0)',
+            }, '& .MuiDialog-paper': {
+                bgcolor: '#2d2d2d',
+                color: '#eee',
+                ml: 'auto',
+                mr: '2rem',
+                maxWidth: '620px'
+
+            }
+        }}>
+            <DialogTitle sx={{ color: '#fff', fontWeight: 'bold', fontSize: '14px' }}>Коррекция "Уровни"</DialogTitle>
             <DialogContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 120, bgcolor: '#3c3c3c', borderRadius: 1 }}>
